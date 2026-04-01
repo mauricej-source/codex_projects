@@ -104,15 +104,15 @@ function renderRows(items) {
     .map(
       (item) => `
         <tr>
-          <td><span class="keyword-pill">${item.keyword}</span></td>
-          <td>${item.source}</td>
-          <td>${item.headline || "N/A"}</td>
-          <td class="mono">${formatTimestamp(item.timeReported)}</td>
-          <td class="mono ${(item.tickers || []).length ? "" : "muted-cell"}">${
+          <td data-label="Keyword"><span class="keyword-pill">${item.keyword}</span></td>
+          <td data-label="News Source">${item.source}</td>
+          <td data-label="News Title">${item.headline || "N/A"}</td>
+          <td data-label="Time Reported" class="mono">${formatTimestamp(item.timeReported)}</td>
+          <td data-label="Stock Ticker Symbol" class="mono ${(item.tickers || []).length ? "" : "muted-cell"}">${
             (item.tickers || []).length ? item.tickers.join(", ") : "N/A"
           }</td>
-          <td><a href="${item.articleUrl}" target="_blank" rel="noreferrer">Open Article</a></td>
-          <td>${
+          <td data-label="News Link"><a href="${item.articleUrl}" target="_blank" rel="noreferrer">Open Article</a></td>
+          <td data-label="Technical Chart">${
             (item.finvizUrls || []).length
               ? item.finvizUrls
                   .map((url, index) => {

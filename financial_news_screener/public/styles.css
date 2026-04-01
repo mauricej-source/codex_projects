@@ -292,4 +292,53 @@ a:hover {
   h1 {
     max-width: 100%;
   }
+
+  .table-wrap {
+    overflow: visible;
+  }
+
+  table,
+  thead,
+  tbody,
+  tr,
+  th,
+  td {
+    display: block;
+  }
+
+  table {
+    min-width: 0;
+  }
+
+  thead {
+    display: none;
+  }
+
+  tbody {
+    padding: 0 16px 16px;
+  }
+
+  tbody tr {
+    margin-bottom: 16px;
+    border: 1px solid var(--line);
+    background: rgba(255, 250, 241, 0.82);
+  }
+
+  tbody td {
+    display: grid;
+    grid-template-columns: 140px minmax(0, 1fr);
+    gap: 12px;
+    padding: 12px 14px;
+    align-items: start;
+    word-break: break-word;
+  }
+
+  tbody td::before {
+    content: attr(data-label);
+    font-size: 0.78rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--muted);
+  }
 }

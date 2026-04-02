@@ -8,6 +8,10 @@ This project produces a single self-contained HTML page that visualizes Florida 
 
 All data is embedded directly into the output HTML, so the page can be opened locally in a browser without a web server or external runtime dependencies.
 
+## Screenshot
+
+![State of Florida Data Heatmaps](./docs/florida_county_energy_map.png)
+
 ## Project Output
 
 The main output file is:

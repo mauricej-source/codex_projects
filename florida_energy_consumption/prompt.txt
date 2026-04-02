@@ -1,0 +1,142 @@
+Build a single self-contained HTML project called "State of Florida Data Heatmaps" that renders an interactive Florida county choropleth map with a left-hand navigation panel, a main map panel, and a full-width footer panel.
+
+Project requirements:
+
+Create a Python generator script that reads local Excel workbooks and outputs one standalone HTML file with all data embedded directly in the page. The generated HTML must not depend on any external JS or CSS runtime libraries. The only network fetch allowed during generation is for Florida county boundary GeoJSON.
+
+Workspace files:
+- florida_customer_outage.xlsx
+- florida_energy_consumption.xlsx
+- florida_ng_consumption.xlsx
+- output HTML: florida_county_outage_map.html
+- generator script: scripts/generate_florida_outage_map.py
+
+Overall page behavior:
+- Single-file HTML output
+- Florida county choropleth heatmap
+- Left navigation panel for layer controls
+- Map supports zoom in, zoom out, reset view, mouse wheel zoom, and drag-to-pan
+- Hover tooltip only, no click-to-pin details
+- Full-width footer panel beneath both the left nav and map panel for source citations
+- Responsive enough to work on desktop and smaller screens
+
+Data layers:
+1. Electrical - Percent Outage
+2. Electrical - Energy Consumption
+3. Natural Gas - Consumption
+
+Layer behavior:
+- Only one layer is active at a time
+- The active layer control should behave like a radio-style toggle that can also be turned off by clicking the active item again
+- When heatmap is off, counties return to a neutral fill
+- Active Layer Summary and Legend update when the active layer changes
+- Tooltip must show only the data relevant to the active layer
+- For outage layer, tooltip should show:
+  - county name
+  - tracked customers
+  - customers out
+  - percent outage
+- For electric energy layer, tooltip should show:
+  - county name
+  - selected year energy consumption
+- For natural gas layer, tooltip should show:
+  - county name
+  - selected year natural gas consumption
+
+Year selector behavior:
+- Place a year dropdown directly beneath the Data Layer controls
+- Show it only for the electric energy and natural gas layers
+- Hide it for outage layer
+- Changing the year must refresh:
+  - county colors
+  - active layer summary
+  - legend values
+  - tooltip values
+- Workbook years run from 2017 to 2036
+- Keep separate selected years for electric and natural gas
+
+Data handling:
+- Match counties by county name
+- Normalize county naming mismatches such as DeSoto -> Desoto
+- Outage workbook data may contain duplicated numeric digits; normalize malformed values before computing percent outage
+- Electric workbook source field is elec
+- Natural gas workbook source field is ng
+- Aggregate energy and gas consumption by county and year using Consumption MMBtu
+- Embed all needed data into the HTML
+
+Color and style requirements:
+- Page background: #00151A
+- Left navigation panel background: #0C2E3C
+- Left panel body text: #C3E6F3
+- Accent/subtitle/shadow color: #1F6884
+- Main title text color: #1F6884
+- Map panel background: rgba(160, 222, 235, 0.78)
+- Florida neutral county fill: #D6C1A3
+- Shared panel radius: 16px
+- Gap between left panel and map panel: 12px
+- Left panel shadow: 0 6px 18px #1F6884
+- Map panel shadow: 0 10px 20px #1F6884
+- Map control buttons should use the accent color styling and sit horizontally in the top-right of the map panel
+
+Legends:
+- Outage layer palette:
+  - #FFF8DC
+  - #f1df9a
+  - #dcbc63
+  - #c19a1f
+  - #A08000
+- Electric energy layer palette:
+  - #F4B994
+  - #df915e
+  - #bb6430
+  - #a7511d
+  - #95420F
+- Natural gas layer should use a distinct green palette
+- Outage layer can use current-year quantile scaling
+- Electric and natural gas should use cross-year/global quantile thresholds so colors can change meaningfully as years change
+
+Map framing:
+- Default zoom should be slightly zoomed in relative to full-state fit
+- Reset view should return to the saved default framing
+- Use tuned default offsets so Florida sits left-shifted and slightly lower in the panel rather than perfectly centered
+
+Left panel content:
+- Eyebrow: Single File
+- Title: State of Florida Data Heatmaps
+- Intro text:
+  County-level data from a set of excel workbooks, embedded directly into this page with no external runtime dependencies.
+- Section titles:
+  - Data Layer
+  - Active Layer Summary
+  - Legend
+
+Summary cards:
+- Counties
+- Non-Zero
+- Maximum
+- Average
+- Use slightly reduced value font sizing compared to the original larger card design
+
+Footer panel:
+- Title: Data Sources
+- Bullet list with:
+  - County boundaries: Florida county boundary service published by the Florida Department of Agriculture and Consumer Services.
+  - 2026 Outage data source: https://poweroutage.us/use-our-data/utilities
+  - 2017 to 2036 Energy Consumption by County Data Source: https://maps.nlr.gov/slope/data-viewer
+  - 2017 to 2036 Natural Gas Consumption by County Data Source: https://maps.nlr.gov/slope/data-viewer
+
+README:
+Create a README.md that explains:
+- what the project is
+- what the end user can expect
+- how to use the page
+- what source files feed the generator
+- how to regenerate the HTML
+- required Python dependencies
+- that the page is opened directly in a browser and does not require a server
+
+Implementation preference:
+- Use Python with openpyxl and requests
+- Generate HTML/CSS/JS from the Python script
+- Keep the output fully self-contained
+- Keep the code clean and maintainable so future layer additions are straightforward

@@ -494,7 +494,7 @@ const splitSkillSegments = (line: string) =>
     .map((segment) => sanitizeInline(segment))
     .filter(Boolean);
 
-const fallbackSkillScan = (text: string) => {
+export const scanKnownSkills = (text: string) => {
   const found = new Set<string>();
   const normalizedText = normalizeSkillToken(text);
 
@@ -560,7 +560,7 @@ const parseSkillGroups = (sections: ResumeSection[]) => {
     .filter((group) => group.skills.length > 0)
     .sort((left, right) => left.category.localeCompare(right.category));
 
-  const fallbackSkills = fallbackSkillScan(sections.flatMap((section) => section.lines).join("\n"));
+  const fallbackSkills = scanKnownSkills(sections.flatMap((section) => section.lines).join("\n"));
   const flatSkills = unique([
     ...skillGroups.flatMap((group) => [group.category, ...group.skills]),
     ...fallbackSkills
@@ -651,13 +651,18 @@ export const defaultProfile = (): CandidateProfile => ({
   keywords: [],
   skillGroups: [],
   sections: [],
-  preferences: {
-    remoteOnly: false,
-    preferredLocations: [],
-    minimumSalary: undefined
-  },
-  rawText: ""
-});
+    preferences: {
+      remoteOnly: false,
+      preferredLocations: [],
+      minimumSalary: undefined
+    },
+    diceSearch: {
+      location: "Jacksonville, FL",
+      workplaceTypes: [],
+      postedDate: "SEVEN"
+    },
+    rawText: ""
+  });
 
 export async function extractResumeText(file: File): Promise<{ text: string; source: ResumeSource }> {
   const extension = file.name.split(".").pop()?.toLowerCase();
@@ -770,6 +775,11 @@ export function parseResumeText(text: string): CandidateProfile {
       remoteOnly: false,
       preferredLocations: location ? [location] : [],
       minimumSalary: undefined
+    },
+    diceSearch: {
+      location: "Jacksonville, FL",
+      workplaceTypes: [],
+      postedDate: "SEVEN"
     },
     rawText: normalizedText
   };

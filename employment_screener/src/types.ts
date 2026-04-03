@@ -1,5 +1,11 @@
 export type WorkMode = "Remote" | "Hybrid" | "On-site";
 
+export type DiceSearchSettings = {
+  location: string;
+  workplaceTypes: WorkMode[];
+  postedDate: string;
+};
+
 export type CandidateProfile = {
   fullName: string;
   currentTitle: string;
@@ -24,6 +30,7 @@ export type CandidateProfile = {
     preferredLocations: string[];
     minimumSalary?: number;
   };
+  diceSearch: DiceSearchSettings;
   rawText: string;
 };
 

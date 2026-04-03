@@ -221,6 +221,7 @@ class DiceMcpClient {
         const tool = await this.getSearchTool();
         const attempts = buildDiceAttempts(tool, profile);
         let lastError;
+        const dedupedJobs = new Map();
         for (const attempt of attempts) {
             try {
                 const result = await client.callTool({ name: tool.name, arguments: attempt.args });
@@ -232,21 +233,24 @@ class DiceMcpClient {
                 const jobs = rawJobs
                     .map((job, index) => parseDiceJob(job, index))
                     .filter((job) => job !== null);
-                if (jobs.length > 0) {
-                    return {
-                        jobs,
-                        meta: {
-                            provider: "dice",
-                            fallbackUsed: false,
-                            notice: AI_DISCLOSURE,
-                            toolName: tool.name
-                        }
-                    };
+                for (const job of jobs) {
+                    dedupedJobs.set(job.id, job);
                 }
             }
             catch (error) {
                 lastError = error;
             }
+        }
+        if (dedupedJobs.size > 0) {
+            return {
+                jobs: Array.from(dedupedJobs.values()),
+                meta: {
+                    provider: "dice",
+                    fallbackUsed: false,
+                    notice: AI_DISCLOSURE,
+                    toolName: tool.name
+                }
+            };
         }
         if (lastError instanceof Error) {
             throw lastError;

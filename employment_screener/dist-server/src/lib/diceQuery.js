@@ -29,33 +29,28 @@ export function simplifyLocation(value) {
     return normalized.split("|")[0]?.split(";")[0]?.trim() ?? normalized;
 }
 export function buildKeywordCandidates(profile) {
-    const fullSignal = dedupeStrings([...profile.targetTitles, ...profile.skills, ...profile.keywords]);
-    const conciseSignal = dedupeStrings([
+    const titleQueries = dedupeStrings([profile.currentTitle, ...profile.targetTitles]).map(sanitizeKeyword);
+    const keywordQueries = dedupeStrings([
+        ...profile.keywords.slice(0, 4),
         profile.currentTitle,
-        ...profile.targetTitles.slice(0, 2),
-        ...profile.skills.slice(0, 3)
-    ]);
-    const broadSignal = dedupeStrings([
-        profile.currentTitle,
-        profile.targetTitles[0],
-        profile.skills[0],
-        profile.skills[1]
-    ]);
-    return [
-        sanitizeKeyword(fullSignal.slice(0, 6).join(" ")),
-        sanitizeKeyword(conciseSignal.slice(0, 4).join(" ")),
-        sanitizeKeyword(broadSignal.slice(0, 2).join(" ")),
-        sanitizeKeyword(profile.currentTitle),
-        sanitizeKeyword(profile.targetTitles[0] ?? ""),
-        DICE_DEFAULT_KEYWORD_FALLBACK
-    ].filter(Boolean);
+        profile.targetTitles[0]
+    ]).map(sanitizeKeyword);
+    return [...titleQueries, ...keywordQueries, DICE_DEFAULT_KEYWORD_FALLBACK].filter(Boolean);
+}
+function toDiceWorkplaceType(value) {
+    if (value === "On-site") {
+        return "On-Site";
+    }
+    return value;
 }
 export function buildDiceQueryPreview(profile) {
+    const keywordCandidates = buildKeywordCandidates(profile);
     return {
-        keywordCandidates: buildKeywordCandidates(profile),
-        location: simplifyLocation(profile.preferences.preferredLocations[0] || profile.location),
-        workplaceTypes: profile.preferences.remoteOnly ? ["Remote"] : [],
-        postedDate: "SEVEN",
+        keywordCandidates,
+        primaryKeyword: keywordCandidates[0] ?? DICE_DEFAULT_KEYWORD_FALLBACK,
+        location: simplifyLocation(profile.diceSearch.location),
+        workplaceTypes: profile.diceSearch.workplaceTypes.map(toDiceWorkplaceType),
+        postedDate: normalizeWhitespace(profile.diceSearch.postedDate) || "SEVEN",
         jobsPerPage: 25,
         fields: [
             "id",

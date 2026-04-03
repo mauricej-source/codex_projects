@@ -4,9 +4,10 @@ export const DICE_DEFAULT_KEYWORD_FALLBACK = "Software Engineer";
 
 export type DiceQueryPreview = {
   keywordCandidates: string[];
+  primaryKeyword: string;
   location: string;
   workplaceTypes: string[];
-  postedDate: "SEVEN";
+  postedDate: string;
   jobsPerPage: number;
   fields: string[];
 };
@@ -51,37 +52,36 @@ export function simplifyLocation(value: string) {
 }
 
 export function buildKeywordCandidates(profile: CandidateProfile) {
-  const fullSignal = dedupeStrings([...profile.targetTitles, ...profile.skills, ...profile.keywords]);
+  const titleQueries = dedupeStrings([profile.currentTitle, ...profile.targetTitles]).map(
+    sanitizeKeyword
+  );
 
-  const conciseSignal = dedupeStrings([
+  const keywordQueries = dedupeStrings([
+    ...profile.keywords.slice(0, 4),
     profile.currentTitle,
-    ...profile.targetTitles.slice(0, 2),
-    ...profile.skills.slice(0, 3)
-  ]);
+    profile.targetTitles[0]
+  ]).map(sanitizeKeyword);
 
-  const broadSignal = dedupeStrings([
-    profile.currentTitle,
-    profile.targetTitles[0],
-    profile.skills[0],
-    profile.skills[1]
-  ]);
+  return [...titleQueries, ...keywordQueries, DICE_DEFAULT_KEYWORD_FALLBACK].filter(Boolean);
+}
 
-  return [
-    sanitizeKeyword(fullSignal.slice(0, 6).join(" ")),
-    sanitizeKeyword(conciseSignal.slice(0, 4).join(" ")),
-    sanitizeKeyword(broadSignal.slice(0, 2).join(" ")),
-    sanitizeKeyword(profile.currentTitle),
-    sanitizeKeyword(profile.targetTitles[0] ?? ""),
-    DICE_DEFAULT_KEYWORD_FALLBACK
-  ].filter(Boolean);
+function toDiceWorkplaceType(value: string) {
+  if (value === "On-site") {
+    return "On-Site";
+  }
+
+  return value;
 }
 
 export function buildDiceQueryPreview(profile: CandidateProfile): DiceQueryPreview {
+  const keywordCandidates = buildKeywordCandidates(profile);
+
   return {
-    keywordCandidates: buildKeywordCandidates(profile),
-    location: simplifyLocation(profile.preferences.preferredLocations[0] || profile.location),
-    workplaceTypes: profile.preferences.remoteOnly ? ["Remote"] : [],
-    postedDate: "SEVEN",
+    keywordCandidates,
+    primaryKeyword: keywordCandidates[0] ?? DICE_DEFAULT_KEYWORD_FALLBACK,
+    location: simplifyLocation(profile.diceSearch.location),
+    workplaceTypes: profile.diceSearch.workplaceTypes.map(toDiceWorkplaceType),
+    postedDate: normalizeWhitespace(profile.diceSearch.postedDate) || "SEVEN",
     jobsPerPage: 25,
     fields: [
       "id",

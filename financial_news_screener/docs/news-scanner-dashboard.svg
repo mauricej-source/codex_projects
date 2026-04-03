@@ -1,0 +1,131 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="980" viewBox="0 0 1600 980" role="img" aria-labelledby="title desc">
+  <title id="title">News Scanner dashboard preview</title>
+  <desc id="desc">Stylized preview of the News Scanner interface showing the header panel, feed selector, keyword controls, and results table.</desc>
+  <defs>
+    <linearGradient id="buttonGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#1eaab4" />
+      <stop offset="100%" stop-color="#8ce5ea" />
+    </linearGradient>
+    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="0" stdDeviation="10" flood-color="#a0c3e8" flood-opacity="0.85" />
+    </filter>
+  </defs>
+
+  <rect width="1600" height="980" fill="#0b2d2f" />
+
+  <rect x="46" y="34" width="1508" height="430" rx="20" fill="#175a5e" filter="url(#glow)" />
+  <text x="70" y="84" font-family="Arial, Helvetica, sans-serif" font-size="18" font-weight="700" letter-spacing="3" fill="#9fd5da">LIVE MONITOR</text>
+  <text x="70" y="146" font-family="Arial, Helvetica, sans-serif" font-size="68" font-weight="800" fill="#0b2d2f">News Scanner</text>
+  <text x="70" y="196" font-family="Arial, Helvetica, sans-serif" font-size="20" fill="#d3edf0">The table refreshes every 15 minutes, surfaces the latest matching stories, and links</text>
+  <text x="70" y="226" font-family="Arial, Helvetica, sans-serif" font-size="20" fill="#d3edf0">each parsed ticker to its Finviz daily chart.</text>
+
+  <rect x="1060" y="58" width="470" height="170" rx="4" fill="#f4efe5" />
+  <line x1="1082" y1="128" x2="1508" y2="128" stroke="#d7d1c8" />
+  <line x1="1082" y1="176" x2="1508" y2="176" stroke="#d7d1c8" />
+  <text x="1088" y="104" font-family="Arial, Helvetica, sans-serif" font-size="20" fill="#2e2e2e">Status</text>
+  <text x="1476" y="104" text-anchor="end" font-family="Arial, Helvetica, sans-serif" font-size="20" font-weight="700" fill="#141414">Live</text>
+  <text x="1088" y="152" font-family="Arial, Helvetica, sans-serif" font-size="20" fill="#2e2e2e">Last Refresh</text>
+  <text x="1476" y="152" text-anchor="end" font-family="Arial, Helvetica, sans-serif" font-size="20" font-weight="700" fill="#141414">Apr 3, 2026, 12:47 PM</text>
+  <text x="1088" y="200" font-family="Arial, Helvetica, sans-serif" font-size="20" fill="#2e2e2e">Matches</text>
+  <text x="1476" y="200" text-anchor="end" font-family="Arial, Helvetica, sans-serif" font-size="20" font-weight="700" fill="#141414">152</text>
+
+  <text x="70" y="278" font-family="Arial, Helvetica, sans-serif" font-size="20" font-weight="700" letter-spacing="3" fill="#9fd5da">News Feeds</text>
+  <text x="196" y="278" font-family="Arial, Helvetica, sans-serif" font-size="14" fill="#9fd5da">(Select one or more RSS feeds)</text>
+  <rect x="70" y="305" width="420" height="42" rx="21" fill="url(#buttonGrad)" />
+  <text x="90" y="334" font-family="Arial, Helvetica, sans-serif" font-size="18" font-weight="700" fill="#111">Google News Search, Nasdaq Markets</text>
+
+  <text x="70" y="396" font-family="Arial, Helvetica, sans-serif" font-size="20" font-weight="700" letter-spacing="3" fill="#9fd5da">Tracked Keywords</text>
+  <text x="276" y="396" font-family="Arial, Helvetica, sans-serif" font-size="14" fill="#9fd5da">(Edit keywords separated by '|')</text>
+  <rect x="70" y="418" width="1260" height="50" rx="4" fill="#f4efe5" />
+  <text x="86" y="451" font-family="Arial, Helvetica, sans-serif" font-size="18" fill="#2a2a2a">strategic|partnership|collaboration|MOU|accelerated|growth|artificial|intelligence|trump|IPO</text>
+  <rect x="1342" y="418" width="188" height="50" rx="25" fill="url(#buttonGrad)" />
+  <text x="1436" y="451" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="17" font-weight="700" fill="#111">Apply Keywords</text>
+
+  <g font-family="Arial, Helvetica, sans-serif" font-size="14" font-weight="700" fill="#111">
+    <rect x="70" y="490" width="92" height="36" rx="18" fill="url(#buttonGrad)" />
+    <text x="116" y="514" text-anchor="middle">strategic</text>
+    <rect x="170" y="490" width="112" height="36" rx="18" fill="url(#buttonGrad)" />
+    <text x="226" y="514" text-anchor="middle">partnership</text>
+    <rect x="292" y="490" width="118" height="36" rx="18" fill="#5d7f81" opacity="0.72" />
+    <text x="351" y="514" text-anchor="middle">collaboration</text>
+    <rect x="420" y="490" width="72" height="36" rx="18" fill="#5d7f81" opacity="0.72" />
+    <text x="456" y="514" text-anchor="middle">MOU</text>
+    <rect x="500" y="490" width="118" height="36" rx="18" fill="#5d7f81" opacity="0.72" />
+    <text x="559" y="514" text-anchor="middle">accelerated</text>
+    <rect x="628" y="490" width="82" height="36" rx="18" fill="#5d7f81" opacity="0.72" />
+    <text x="669" y="514" text-anchor="middle">growth</text>
+    <rect x="718" y="490" width="94" height="36" rx="18" fill="#5d7f81" opacity="0.72" />
+    <text x="765" y="514" text-anchor="middle">artificial</text>
+    <rect x="820" y="490" width="106" height="36" rx="18" fill="#5d7f81" opacity="0.72" />
+    <text x="873" y="514" text-anchor="middle">intelligence</text>
+    <rect x="936" y="490" width="78" height="36" rx="18" fill="#5d7f81" opacity="0.72" />
+    <text x="975" y="514" text-anchor="middle">trump</text>
+    <rect x="1024" y="490" width="48" height="36" rx="18" fill="url(#buttonGrad)" />
+    <text x="1048" y="514" text-anchor="middle">IPO</text>
+  </g>
+
+  <rect x="46" y="486" width="1508" height="458" rx="20" fill="#175a5e" filter="url(#glow)" />
+  <text x="70" y="538" font-family="Arial, Helvetica, sans-serif" font-size="26" font-weight="700" fill="#9fd5da">Latest Results</text>
+  <text x="70" y="566" font-family="Arial, Helvetica, sans-serif" font-size="16" fill="#9fd5da">Loaded 152 results sorted by the latest time reported.</text>
+  <rect x="1392" y="534" width="138" height="46" rx="23" fill="url(#buttonGrad)" />
+  <text x="1461" y="563" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="16" font-weight="700" fill="#111">Refresh Now</text>
+
+  <rect x="74" y="610" width="1460" height="300" rx="12" fill="#26969d" />
+  <rect x="80" y="616" width="1448" height="74" rx="10" fill="#5b9da7" />
+  <rect x="80" y="690" width="1448" height="220" fill="#f4efe5" />
+
+  <g font-family="Arial, Helvetica, sans-serif" font-size="12" font-weight="700" fill="#111">
+    <text x="108" y="662">KEYWORD</text>
+    <text x="268" y="662">NEWS FEED</text>
+    <text x="430" y="662">NEWS SOURCE</text>
+    <text x="700" y="662">NEWS TITLE</text>
+    <text x="1018" y="662">TIME REPORTED</text>
+    <text x="1178" y="662">STOCK TICKER</text>
+    <text x="1360" y="662">NEWS LINK</text>
+  </g>
+
+  <g font-family="Arial, Helvetica, sans-serif" font-size="13" fill="#222">
+    <line x1="80" y1="782" x2="1528" y2="782" stroke="#ddd5ca" />
+    <line x1="80" y1="856" x2="1528" y2="856" stroke="#ddd5ca" />
+
+    <rect x="106" y="714" width="72" height="30" rx="15" fill="#ece7d8" />
+    <text x="142" y="734" text-anchor="middle" font-weight="700">strategic</text>
+    <text x="258" y="726">Nasdaq</text>
+    <text x="258" y="746">Markets</text>
+    <text x="430" y="734">Nasdaq Markets</text>
+    <text x="700" y="726">XCharge North America, JOJO</text>
+    <text x="700" y="746">Superfast EV Charging To Deploy</text>
+    <text x="700" y="766">New EV Charging Network In Illinois</text>
+    <text x="1010" y="726">Apr 3, 2026</text>
+    <text x="1010" y="746">11:45 AM</text>
+    <text x="1178" y="734">XCH</text>
+    <text x="1360" y="734">Open</text>
+    <text x="1450" y="734">XCH</text>
+
+    <rect x="106" y="788" width="52" height="30" rx="15" fill="#ece7d8" />
+    <text x="132" y="808" text-anchor="middle" font-weight="700">IPO</text>
+    <text x="258" y="800">Google News</text>
+    <text x="258" y="820">Search</text>
+    <text x="430" y="808">Businesskorea</text>
+    <text x="700" y="800">CXMT IPO Review Suspension</text>
+    <text x="700" y="820">Eases DRAM Supply Fears</text>
+    <text x="1010" y="800">Apr 3, 2026</text>
+    <text x="1010" y="820">8:54 AM</text>
+    <text x="1178" y="808">N/A</text>
+    <text x="1360" y="808">Open</text>
+    <text x="1450" y="808">N/A</text>
+
+    <rect x="106" y="862" width="52" height="30" rx="15" fill="#ece7d8" />
+    <text x="132" y="882" text-anchor="middle" font-weight="700">IPO</text>
+    <text x="258" y="874">Google News</text>
+    <text x="258" y="894">Search</text>
+    <text x="430" y="882">Business Standard</text>
+    <text x="700" y="874">IFSC listing push faces reality</text>
+    <text x="700" y="894">check after GIFT City IPO withdrawal</text>
+    <text x="1010" y="874">Apr 3, 2026</text>
+    <text x="1010" y="894">8:32 AM</text>
+    <text x="1178" y="882">N/A</text>
+    <text x="1360" y="882">Open</text>
+    <text x="1450" y="882">N/A</text>
+  </g>
+</svg>

@@ -7,12 +7,17 @@ const parser = new Parser({
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
   },
 });
+const REQUEST_HEADERS = {
+  "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+  Accept: "application/rss+xml, application/atom+xml, application/xml, text/xml;q=0.9, */*;q=0.8",
+};
 
 const PORT = Number(process.env.PORT || 3000);
 const CACHE_TTL_MS = Number(process.env.CACHE_TTL_MS || 15 * 60 * 1000);
 const MAX_ITEM_AGE_DAYS = Number(process.env.MAX_ITEM_AGE_DAYS || 14);
 const DEFAULT_KEYWORDS =
-  "strategic|partnership|collaboration|MOU|accelerated|growth|artificial|intelligence|trump";
+  "strategic|partnership|collaboration|MOU|accelerated|growth|artificial|intelligence|trump|IPO";
+const FEED_SEPARATOR = "|";
 const TICKER_STOPWORDS = new Set([
   "A",
   "AI",
@@ -85,12 +90,53 @@ const COMPANY_STOPWORDS = new Set([
   "Tokenized",
   "Wall Street",
 ]);
+const FEED_PROVIDERS = [
+  {
+    id: "google-news",
+    name: "Google News Search",
+    description: "Keyword-targeted Google News RSS search results",
+    mode: "keyword-search",
+  },
+  {
+    id: "nasdaq-markets",
+    name: "Nasdaq Markets",
+    description: "Nasdaq market and company headlines",
+    mode: "feed",
+    url: "https://www.nasdaq.com/feed/rssoutbound?category=Markets",
+  },
+  {
+    id: "nasdaq-ipos",
+    name: "Nasdaq IPOs",
+    description: "Nasdaq IPO-focused headlines",
+    mode: "feed",
+    url: "https://www.nasdaq.com/feed/rssoutbound?category=IPOs",
+  },
+  {
+    id: "sec-press-releases",
+    name: "SEC Press Releases",
+    description: "Official SEC press releases",
+    mode: "feed",
+    url: "https://www.sec.gov/news/pressreleases.rss",
+  },
+  {
+    id: "fed-press-releases",
+    name: "Federal Reserve Press Releases",
+    description: "Official Federal Reserve press releases",
+    mode: "feed",
+    url: "https://www.federalreserve.gov/feeds/press_all.xml",
+  },
+];
+const FEED_PROVIDER_MAP = new Map(FEED_PROVIDERS.map((provider) => [provider.id, provider]));
 
 function getKeywords() {
   return (process.env.KEYWORDS || DEFAULT_KEYWORDS)
-    .split("|")
+    .split(FEED_SEPARATOR)
     .map((keyword) => keyword.trim())
     .filter(Boolean);
+}
+
+function getDefaultFeedIds() {
+  return ["google-news", "nasdaq-markets"];
 }
 
 function escapeQuery(keyword) {
@@ -101,6 +147,22 @@ function buildFeedUrl(keyword) {
   return `https://news.google.com/rss/search?q=${escapeQuery(keyword)}&hl=en-US&gl=US&ceid=US:en`;
 }
 
+async function parseFeedFromUrl(url) {
+  const response = await fetch(url, { headers: REQUEST_HEADERS });
+  if (!response.ok) {
+    throw new Error(`Status code ${response.status}`);
+  }
+
+  const xml = await response.text();
+  return parser.parseString(xml);
+}
+
+function normalizeFeedIds(feedIds) {
+  const requested = Array.isArray(feedIds) ? feedIds : [];
+  const normalized = requested.filter((feedId) => FEED_PROVIDER_MAP.has(feedId));
+  return normalized.length ? normalized : getDefaultFeedIds();
+}
+
 function normalizeSource(item) {
   if (item.source && typeof item.source === "object" && item.source.title) {
     return item.source.title.trim();
@@ -109,6 +171,11 @@ function normalizeSource(item) {
   const title = item.title || "";
   const splitTitle = title.split(" - ");
   return splitTitle.length > 1 ? splitTitle.at(-1).trim() : "Unknown";
+}
+
+function normalizeFeedSource(item, provider) {
+  const source = normalizeSource(item);
+  return source === "Unknown" ? provider.name : source;
 }
 
 function stripSourceFromTitle(title) {
@@ -149,6 +216,17 @@ function parseTickers(text) {
   return Array.from(tickers);
 }
 
+function buildTextBlob(item) {
+  return [item.title, item.contentSnippet, item.content, item.summary]
+    .filter(Boolean)
+    .join(" ");
+}
+
+function findMatchedKeyword(text, keywords) {
+  const normalizedText = String(text || "").toLowerCase();
+  return keywords.find((keyword) => normalizedText.includes(keyword.toLowerCase())) || null;
+}
+
 function isFreshEnough(timeReported) {
   const timestamp = new Date(timeReported).getTime();
   if (Number.isNaN(timestamp)) return false;
@@ -157,14 +235,7 @@ function isFreshEnough(timeReported) {
 
 function normalizeItem(item, keyword) {
   const headline = stripSourceFromTitle(item.title || "");
-  const textBlob = [
-    item.title,
-    item.contentSnippet,
-    item.content,
-    item.summary,
-  ]
-    .filter(Boolean)
-    .join(" ");
+  const textBlob = buildTextBlob(item);
   const tickers = parseTickers(textBlob);
   const timeReported = item.isoDate || item.pubDate || new Date().toISOString();
 
@@ -183,6 +254,16 @@ function normalizeItem(item, keyword) {
       ? `https://finviz.com/quote.ashx?t=${encodeURIComponent(toFinvizTicker(tickers[0]))}&p=d`
       : "",
     headline,
+  };
+}
+
+function normalizeProviderItem(item, keyword, provider) {
+  const normalized = normalizeItem(item, keyword);
+  return {
+    ...normalized,
+    source: normalizeFeedSource(item, provider),
+    providerId: provider.id,
+    providerName: provider.name,
   };
 }
 
@@ -348,30 +429,79 @@ function dedupeItems(items) {
 }
 
 async function fetchKeywordFeed(keyword) {
-  const feed = await parser.parseURL(buildFeedUrl(keyword));
+  const feed = await parseFeedFromUrl(buildFeedUrl(keyword));
   const items = Array.isArray(feed.items) ? feed.items : [];
-  const normalizedItems = items.map((item) => normalizeItem(item, keyword));
+  const normalizedItems = items.map((item) =>
+    normalizeProviderItem(item, keyword, FEED_PROVIDER_MAP.get("google-news"))
+  );
+  return Promise.all(normalizedItems.map(enrichTickersFromHeadline));
+}
+
+async function fetchProviderFeed(provider, keywords) {
+  const feed = await parseFeedFromUrl(provider.url);
+  const items = Array.isArray(feed.items) ? feed.items : [];
+  const normalizedItems = items
+    .map((item) => {
+      const keyword = findMatchedKeyword(
+        `${stripSourceFromTitle(item.title || "")} ${buildTextBlob(item)}`,
+        keywords
+      );
+
+      if (!keyword) {
+        return null;
+      }
+
+      return normalizeProviderItem(item, keyword, provider);
+    })
+    .filter(Boolean);
+
   return Promise.all(normalizedItems.map(enrichTickersFromHeadline));
 }
 
 async function fetchNews() {
   const keywords = getKeywords();
-  return fetchNewsForKeywords(keywords);
+  const feedIds = getDefaultFeedIds();
+  return fetchNewsForKeywords(keywords, feedIds);
 }
 
-async function fetchNewsForKeywords(keywords) {
-  const settled = await Promise.allSettled(keywords.map(fetchKeywordFeed));
+async function fetchNewsForKeywords(keywords, feedIds) {
+  const providers = normalizeFeedIds(feedIds).map((feedId) => FEED_PROVIDER_MAP.get(feedId));
+  const fetchJobs = [];
+
+  providers.forEach((provider) => {
+    if (provider.mode === "keyword-search") {
+      keywords.forEach((keyword) => {
+        fetchJobs.push({
+          provider,
+          keyword,
+          run: () => fetchKeywordFeed(keyword),
+        });
+      });
+      return;
+    }
+
+    fetchJobs.push({
+      provider,
+      keyword: null,
+      run: () => fetchProviderFeed(provider, keywords),
+    });
+  });
+
+  const settled = await Promise.allSettled(fetchJobs.map((job) => job.run()));
   const rows = [];
   const errors = [];
 
   settled.forEach((result, index) => {
+    const job = fetchJobs[index];
     if (result.status === "fulfilled") {
       rows.push(...result.value);
       return;
     }
 
     errors.push({
-      keyword: keywords[index],
+      providerId: job.provider.id,
+      providerName: job.provider.name,
+      keyword: job.keyword,
       message: result.reason?.message || "Unknown fetch error",
     });
   });
@@ -385,6 +515,12 @@ async function fetchNewsForKeywords(keywords) {
     refreshIntervalMs: CACHE_TTL_MS,
     total: normalized.length,
     keywords,
+    feedIds: providers.map((provider) => provider.id),
+    feeds: providers.map((provider) => ({
+      id: provider.id,
+      name: provider.name,
+      description: provider.description,
+    })),
     errors,
     items: normalized,
   };
@@ -402,20 +538,38 @@ async function getCachedNews() {
   return payload;
 }
 
-app.use(express.json());
+  app.use(express.json());
 app.use(express.static("public"));
+
+app.get("/api/feeds", (req, res) => {
+  res.json({
+    feeds: FEED_PROVIDERS.map((provider) => ({
+      id: provider.id,
+      name: provider.name,
+      description: provider.description,
+    })),
+    defaultFeedIds: getDefaultFeedIds(),
+  });
+});
 
 app.get("/api/news", async (req, res) => {
   try {
     const requestedKeywords =
       typeof req.query.keywords === "string" && req.query.keywords.trim()
         ? req.query.keywords
-            .split("|")
+            .split(FEED_SEPARATOR)
             .map((keyword) => keyword.trim())
             .filter(Boolean)
         : null;
+    const requestedFeedIds =
+      typeof req.query.feeds === "string" && req.query.feeds.trim()
+        ? req.query.feeds
+            .split(FEED_SEPARATOR)
+            .map((feedId) => feedId.trim())
+            .filter(Boolean)
+        : null;
     const payload = requestedKeywords?.length
-      ? await fetchNewsForKeywords(requestedKeywords)
+      ? await fetchNewsForKeywords(requestedKeywords, requestedFeedIds || getDefaultFeedIds())
       : await getCachedNews();
     res.json(payload);
   } catch (error) {

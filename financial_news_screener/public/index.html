@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Financial News Monitor</title>
+    <title>News Scanner</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -14,38 +14,61 @@
   </head>
   <body>
     <div class="page-shell">
-      <header class="hero">
-        <div>
-          <p class="eyebrow">Live Monitor</p>
-          <h1>Financial News Scanner</h1>
-          <p class="intro">
-            The table refreshes every 15 minutes, surfaces the latest matching stories,
-            and links each parsed ticker to its Finviz daily chart.
-          </p>
-        </div>
-        <div class="meta-card">
-          <p><span>Status</span><strong id="status">Loading</strong></p>
-          <p><span>Last Refresh</span><strong id="lastRefresh">-</strong></p>
-          <p><span>Matches</span><strong id="matchCount">0</strong></p>
-        </div>
-      </header>
-
-      <section class="filters">
-        <p class="filters-label">Tracked Keywords</p>
-        <div class="keyword-editor">
-          <label class="keyword-label" for="keywordInput">Edit keywords separated by `|`</label>
-          <div class="keyword-form">
-            <input
-              id="keywordInput"
-              type="text"
-              autocomplete="off"
-              spellcheck="false"
-              placeholder="strategic|partnership|collaboration|MOU|accelerated|growth|artificial|intelligence|trump"
-            />
-            <button id="applyKeywordsButton" type="button">Apply Keywords</button>
+      <section class="top-card">
+        <header class="hero">
+          <div>
+            <p class="eyebrow">Live Monitor</p>
+            <h1>News Scanner</h1>
+            <p class="intro">
+              The table refreshes every 15 minutes, surfaces the latest matching stories,
+              and links each parsed ticker to its Finviz daily chart.
+            </p>
           </div>
-        </div>
-        <div id="keywordChips" class="chips"></div>
+          <div class="meta-card">
+            <p><span>Status</span><strong id="status">Loading</strong></p>
+            <p><span>Last Refresh</span><strong id="lastRefresh">-</strong></p>
+            <p><span>Matches</span><strong id="matchCount">0</strong></p>
+          </div>
+        </header>
+
+        <section class="feed-controls">
+          <div class="feed-controls-header">
+            <p class="filters-label">
+              News Feeds <span class="filters-hint">(Select one or more RSS feeds)</span>
+            </p>
+            <div class="feed-select" id="feedSelect">
+              <button id="feedSelectButton" class="feed-select-button" type="button" aria-expanded="false">
+                Loading feeds...
+              </button>
+              <div id="feedSelectMenu" class="feed-select-menu" hidden>
+                <div class="feed-select-actions">
+                  <button id="selectAllFeedsButton" class="feed-action-button" type="button">Select All</button>
+                  <button id="clearFeedsButton" class="feed-action-button" type="button">Reset</button>
+                </div>
+                <div id="feedOptions" class="feed-options"></div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="filters">
+          <p class="filters-label">
+            Tracked Keywords <span class="filters-hint">(Edit keywords separated by `|`)</span>
+          </p>
+          <div class="keyword-editor">
+            <div class="keyword-form">
+              <input
+                id="keywordInput"
+                type="text"
+                autocomplete="off"
+                spellcheck="false"
+                placeholder="strategic|partnership|collaboration|MOU|accelerated|growth|artificial|intelligence|trump"
+              />
+              <button id="applyKeywordsButton" type="button">Apply Keywords</button>
+            </div>
+          </div>
+          <div id="keywordChips" class="chips"></div>
+        </section>
       </section>
 
       <section class="table-card">
@@ -59,21 +82,24 @@
 
         <div id="message" class="message">Loading latest financial news...</div>
 
-        <div class="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th><button class="sort-button" type="button" data-sort-key="keyword">Keyword</button></th>
-                <th><button class="sort-button" type="button" data-sort-key="source">News Source</button></th>
-                <th><button class="sort-button" type="button" data-sort-key="headline">News Title</button></th>
-                <th><button class="sort-button" type="button" data-sort-key="timeReported">Time Reported</button></th>
-                <th><button class="sort-button" type="button" data-sort-key="ticker">Stock Ticker Symbol</button></th>
-                <th><button class="sort-button" type="button" data-sort-key="articleUrl">News Link</button></th>
-                <th><button class="sort-button" type="button" data-sort-key="finvizUrl">Technical Chart</button></th>
-              </tr>
-            </thead>
-            <tbody id="newsTableBody"></tbody>
-          </table>
+        <div class="table-panel">
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th><button class="sort-button" type="button" data-sort-key="keyword">Keyword</button></th>
+                  <th><button class="sort-button" type="button" data-sort-key="providerName">News Feed</button></th>
+                  <th><button class="sort-button" type="button" data-sort-key="source">News Source</button></th>
+                  <th><button class="sort-button" type="button" data-sort-key="headline">News Title</button></th>
+                  <th><button class="sort-button" type="button" data-sort-key="timeReported">Time Reported</button></th>
+                  <th><button class="sort-button" type="button" data-sort-key="ticker">Stock Ticker Symbol</button></th>
+                  <th><button class="sort-button" type="button" data-sort-key="articleUrl">News Link</button></th>
+                  <th><button class="sort-button" type="button" data-sort-key="finvizUrl">Technical Chart</button></th>
+                </tr>
+              </thead>
+              <tbody id="newsTableBody"></tbody>
+            </table>
+          </div>
         </div>
       </section>
     </div>

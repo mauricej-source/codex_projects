@@ -1,115 +1,189 @@
-# Financial News Scanner
+# News Scanner
 
-Single-page financial news application that monitors live news results for configurable keywords and displays matched articles in a sortable table with ticker symbols and Finviz chart links.
+News Scanner is a single-page market-news dashboard that aggregates RSS results across multiple news providers, filters stories by configurable keywords, and presents the matches in a sortable table with ticker symbols and Finviz chart links.
 
-## Application Summary
+![News Scanner dashboard preview](./NewsScanner_ScreenShot.png)
 
-The application has two parts:
+## Project Overview
 
-- A Node/Express backend that searches live news feeds, normalizes the results, and performs best-effort stock ticker extraction.
-- A single-page frontend that displays the latest results in a searchable, sortable, refreshable table.
+The project is designed for quickly scanning live finance-related headlines that match themes you care about, such as `strategic`, `partnership`, `IPO`, `artificial`, or any custom keyword set you enter.
 
-## Current Features
+The app has two main parts:
 
-- Fetches live news using Google News RSS search feeds for each active keyword
-- Combines all feed results into one normalized dataset
-- Sorts news by `Time Reported` descending by default
-- Allows column sorting directly from the table headers
-- Extracts and displays:
+- A Node.js and Express backend that pulls RSS feeds, normalizes articles, applies keyword matching, deduplicates overlapping stories, and performs best-effort ticker extraction.
+- A lightweight browser-based frontend that lets you control feeds and keywords, then explore the results in a sortable table.
+
+## What The App Can Do
+
+- Query multiple RSS sources at once from a single dashboard.
+- Default to `Google News Search` and `Nasdaq Markets`, with additional feeds available from the feed selector.
+- Filter stories by editable keywords separated with `|`.
+- Toggle individual keywords on and off using chips without rewriting the full keyword list.
+- Combine matched stories from selected feeds into one normalized result set.
+- Deduplicate repeated stories that appear across sources.
+- Sort the table by:
   - `Keyword`
+  - `News Feed`
   - `News Source`
   - `News Title`
   - `Time Reported`
   - `Stock Ticker Symbol`
   - `News Link`
   - `Technical Chart`
-- Builds Finviz chart links for detected ticker symbols
-- Refreshes automatically every 15 minutes
-- Supports manual refresh from the page
+- Extract stock tickers when a headline or article metadata contains recognizable symbols.
+- Build Finviz daily-chart links for detected tickers.
+- Refresh automatically every 15 minutes.
+- Refresh on demand with the `Refresh Now` button.
 
-## Single-Page Behavior Enhancements
+## Feed Sources
 
-The single-page UI was enhanced beyond the original version:
+The app currently supports these feed providers:
 
-- The keyword list is editable from a textbox on the page instead of being only environment-driven
-- Keywords entered in the textbox remain visible as the master keyword list
-- Each keyword is also rendered as a clickable chip/button
-- Clicking a keyword chip enables or disables that keyword from the live search criteria
-- Disabling a keyword immediately refreshes the result set
-- Re-enabling a keyword immediately adds it back to the search criteria
-- The textbox and chip/button states are intentionally separate:
-  - textbox = full configured keyword list
-  - chips = active/inactive search toggles
-- Table columns are sortable by clicking the column headers
+- `Google News Search`
+- `Nasdaq Markets`
+- `Nasdaq IPOs`
+- `SEC Press Releases`
+- `Federal Reserve Press Releases`
 
-## Ticker Symbol Logic
+Default selection:
 
-Ticker extraction is best-effort and uses several strategies:
+- `Google News Search`
+- `Nasdaq Markets`
 
-- Direct parsing from article title/snippet/body when symbols appear in known patterns
-- Supported patterns include examples such as:
-  - `[NASDAQ: VERI]`
-  - `(NYSE: U)`
-  - `nCino (NCNO)`
-  - `$NVDA`
-- Company-name lookup when the headline contains a company name but not an explicit ticker
-- Support for multiple detected ticker symbols in a single headline
-- Support for multiple Finviz chart links in a single table row when multiple symbols are found
+## Page Behavior
 
-Examples of enhanced ticker handling:
+When the page loads:
 
-- `Solana attracts tokenized equities as Galaxy enables DeFi lending`
-  - can produce multiple tickers and multiple Finviz links
-- `Unity Shares Surge as Strategic 'Reset' Excises Legacy Ad Business to Fuel AI Growth`
-  - can resolve `Unity` to ticker `U`
-- `Royalty Pharma veteran Kristin Stafford takes CFO post at Zymeworks`
-  - can resolve `Zymeworks` to ticker `ZYME`
+- The app loads the available RSS feeds from the backend.
+- The default feed selection is applied automatically.
+- The current default keyword list is shown in the text input.
+- The table requests the latest matching stories and sorts them by newest first.
 
-Because financial headlines are inconsistent and ticker formatting is not standardized, some rows may still return `N/A`. This is expected behavior when there is not enough reliable context to identify a symbol safely.
+While using the page:
 
-## Styling Updates Implemented
+- The `News Feeds` dropdown lets you choose one or many feed providers.
+- The `Tracked Keywords` input stores the full keyword set.
+- The keyword chips act as active or inactive filters within that master keyword set.
+- Clicking a chip removes or re-adds that keyword from the live query.
+- Applying a new keyword string resets the active chips to match the updated list.
+- The status card shows whether the feed load is live, partial, or failed.
+- The results summary shows how many stories were loaded.
 
-The page styling was refined during the build:
+## Ticker Detection
 
-- Single-page dashboard presentation with a custom color palette
-- Styled hero header and metadata card
-- Styled keyword editor and toggle chips
-- Reduced corner radius on main cards and textbox
-- Custom page title and intro styling
-- Button and chip styling aligned to the chosen accent colors
+Ticker extraction is best-effort. The backend tries several strategies, including:
 
-## Setup
+- Exchange-tag patterns such as `NASDAQ: NVDA`
+- Parenthetical ticker patterns such as `Company (NCNO)`
+- Dollar-sign patterns such as `$TSLA`
+- Company-name lookup using Yahoo Finance search when a headline strongly suggests a company name but not an explicit ticker
 
-1. Install dependencies:
+Because news headlines are not standardized, some rows will correctly remain `N/A` when a reliable ticker cannot be inferred.
+
+## Technology Stack
+
+- Runtime: Node.js
+- Server: Express
+- Feed parsing: `rss-parser`
+- Frontend: plain HTML, CSS, and vanilla JavaScript
+- Data source model: RSS feeds fetched server-side, normalized into a single JSON API
+
+There is no frontend framework, no bundler, and no database in the current project.
+
+## Project Structure
+
+- [server.js](./server.js): Express server, feed adapters, normalization, keyword filtering, ticker extraction, and API routes
+- [public/index.html](./public/index.html): page markup
+- [public/app.js](./public/app.js): client-side state, rendering, sorting, feed selection, and refresh behavior
+- [public/styles.css](./public/styles.css): dashboard styling
+- [.env.example](./.env.example): sample runtime configuration
+
+## Running The Project
+
+### Prerequisites
+
+- Node.js 18+ recommended
+- npm
+
+### Install Dependencies
 
 ```bash
 npm install
 ```
 
-2. Copy environment variables if needed:
+### Optional Environment Setup
 
-```bash
-copy .env.example .env
+You can copy the sample environment file if you want to override defaults:
+
+Windows PowerShell:
+
+```powershell
+Copy-Item .env.example .env
 ```
 
-3. Start the app:
+### Start The App
+
+Production-style start:
 
 ```bash
 npm start
 ```
 
-4. Open [http://localhost:3000](http://localhost:3000)
+Development mode with automatic restart when `server.js` changes:
+
+```bash
+npm run dev
+```
+
+Open the app at:
+
+- [http://localhost:3000](http://localhost:3000)
+
+## Stop The App
+
+If the app is running in the current terminal:
+
+- Press `Ctrl + C`
+
+If you started it elsewhere and need to stop the Node process manually in PowerShell:
+
+```powershell
+Get-Process node
+Stop-Process -Id <PID>
+```
+
+## Build Requirements
+
+No build step is required.
+
+This project serves static frontend files directly through Express, so after `npm install` you can run it immediately with `npm start` or `npm run dev`.
 
 ## Environment Variables
 
 - `PORT`: server port, default `3000`
-- `KEYWORDS`: default server-side keyword list separated by `|`
-- `CACHE_TTL_MS`: backend cache lifetime in milliseconds, default `900000` (15 minutes)
-- `MAX_ITEM_AGE_DAYS`: recent-news window for filtering feed items, default `14`
+- `KEYWORDS`: default keyword list separated by `|`
+- `CACHE_TTL_MS`: backend cache duration in milliseconds, default `900000`
+- `MAX_ITEM_AGE_DAYS`: maximum article age window used for freshness filtering, default `14`
+
+Current sample defaults are defined in [.env.example](./.env.example).
+
+## API Endpoints
+
+- `GET /api/feeds`
+  - returns the available feed providers and the default selected feed ids
+- `GET /api/news`
+  - returns the normalized news dataset
+  - supports `keywords` and `feeds` query parameters using `|` as the separator
+
+Example:
+
+```text
+/api/news?keywords=IPO|partnership&feeds=google-news|nasdaq-markets
+```
 
 ## Notes
 
-- The app currently uses Google News RSS search feeds, so it works without a paid news API key
-- Some article links may resolve through Google News redirect URLs depending on the source feed
-- Finviz links are generated only when a ticker can be identified
-- Deployment was attempted, but platform authentication was required in this session
+- Some providers may produce zero matches for a given keyword set, which is valid behavior.
+- Some official feeds produce broad institutional headlines rather than equity-specific stories.
+- Finviz links are only shown when a ticker is detected.
+- Google News links may redirect through Google News before landing on the original publisher page.

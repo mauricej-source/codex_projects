@@ -11,13 +11,23 @@ const refreshButtonEl = document.getElementById("refreshButton");
 const keywordInputEl = document.getElementById("keywordInput");
 const applyKeywordsButtonEl = document.getElementById("applyKeywordsButton");
 const sortButtonEls = Array.from(document.querySelectorAll(".sort-button"));
+const feedSelectEl = document.getElementById("feedSelect");
+const feedSelectButtonEl = document.getElementById("feedSelectButton");
+const feedSelectMenuEl = document.getElementById("feedSelectMenu");
+const feedOptionsEl = document.getElementById("feedOptions");
+const selectAllFeedsButtonEl = document.getElementById("selectAllFeedsButton");
+const clearFeedsButtonEl = document.getElementById("clearFeedsButton");
 
 const DEFAULT_KEYWORDS =
-  "strategic|partnership|collaboration|MOU|accelerated|growth|artificial|intelligence|trump";
+  "strategic|partnership|collaboration|MOU|accelerated|growth|artificial|intelligence|trump|IPO";
+const FEED_SEPARATOR = "|";
 let currentKeywordString = DEFAULT_KEYWORDS;
 let currentItems = [];
 let allKeywords = DEFAULT_KEYWORDS.split("|");
 let activeKeywords = [...allKeywords];
+let availableFeeds = [];
+let defaultFeedIds = [];
+let activeFeedIds = [];
 let currentSort = {
   key: "timeReported",
   direction: "desc",
@@ -69,6 +79,77 @@ function renderKeywords(keywords) {
   });
 }
 
+function getFeedButtonLabel() {
+  if (!availableFeeds.length) return "Loading feeds...";
+  if (activeFeedIds.length === availableFeeds.length) return "All News Feeds";
+  if (activeFeedIds.length === 1) {
+    return availableFeeds.find((feed) => feed.id === activeFeedIds[0])?.name || "1 Feed Selected";
+  }
+
+  return `${activeFeedIds.length} Feeds Selected`;
+}
+
+function updateFeedButtonLabel() {
+  feedSelectButtonEl.textContent = getFeedButtonLabel();
+}
+
+function renderFeedOptions() {
+  feedOptionsEl.innerHTML = availableFeeds
+    .map(
+      (feed) => `
+        <label class="feed-option">
+          <input type="checkbox" value="${feed.id}" ${
+            activeFeedIds.includes(feed.id) ? "checked" : ""
+          } />
+          <span>
+            <strong>${feed.name}</strong>
+            <small>${feed.description}</small>
+          </span>
+        </label>
+      `
+    )
+    .join("");
+
+  Array.from(feedOptionsEl.querySelectorAll('input[type="checkbox"]')).forEach((input) => {
+    input.addEventListener("change", () => {
+      const nextFeedIds = Array.from(
+        feedOptionsEl.querySelectorAll('input[type="checkbox"]:checked')
+      ).map((element) => element.value);
+
+      activeFeedIds = nextFeedIds.length ? nextFeedIds : availableFeeds.map((feed) => feed.id);
+      renderFeedOptions();
+      updateFeedButtonLabel();
+      loadNews();
+    });
+  });
+}
+
+function closeFeedMenu() {
+  feedSelectMenuEl.hidden = true;
+  feedSelectButtonEl.setAttribute("aria-expanded", "false");
+}
+
+function openFeedMenu() {
+  feedSelectMenuEl.hidden = false;
+  feedSelectButtonEl.setAttribute("aria-expanded", "true");
+}
+
+async function loadFeeds() {
+  const response = await fetch("/api/feeds", { cache: "no-store" });
+  if (!response.ok) {
+    throw new Error(`Feed request failed with status ${response.status}`);
+  }
+
+  const data = await response.json();
+  availableFeeds = Array.isArray(data.feeds) ? data.feeds : [];
+  defaultFeedIds = Array.isArray(data.defaultFeedIds)
+    ? data.defaultFeedIds
+    : availableFeeds.map((feed) => feed.id);
+  activeFeedIds = [...defaultFeedIds];
+  renderFeedOptions();
+  updateFeedButtonLabel();
+}
+
 function compareValues(left, right, key) {
   if (key === "timeReported") {
     return new Date(left[key]).getTime() - new Date(right[key]).getTime();
@@ -105,6 +186,7 @@ function renderRows(items) {
       (item) => `
         <tr>
           <td data-label="Keyword"><span class="keyword-pill">${item.keyword}</span></td>
+          <td data-label="News Feed">${item.providerName || "N/A"}</td>
           <td data-label="News Source">${item.source}</td>
           <td data-label="News Title">${item.headline || "N/A"}</td>
           <td data-label="Time Reported" class="mono">${formatTimestamp(item.timeReported)}</td>
@@ -147,6 +229,9 @@ async function loadNews() {
     if (currentKeywordString) {
       query.set("keywords", currentKeywordString);
     }
+    if (activeFeedIds.length) {
+      query.set("feeds", activeFeedIds.join(FEED_SEPARATOR));
+    }
 
     const response = await fetch(`/api/news?${query.toString()}`, { cache: "no-store" });
     if (!response.ok) {
@@ -164,7 +249,7 @@ async function loadNews() {
     lastRefreshEl.textContent = formatTimestamp(data.fetchedAt);
     matchCountEl.textContent = String(data.total || 0);
     summaryEl.textContent = data.errors?.length
-      ? `Loaded ${data.total || 0} results. Some keyword feeds failed.`
+      ? `Loaded ${data.total || 0} results from ${data.feedIds?.length || activeFeedIds.length} feeds. Some feed requests failed.`
       : `Loaded ${data.total || 0} results sorted by the latest time reported.`;
   } catch (error) {
     statusEl.textContent = "Error";
@@ -202,7 +287,42 @@ sortButtonEls.forEach((button) => {
   });
 });
 
+feedSelectButtonEl.addEventListener("click", () => {
+  if (feedSelectMenuEl.hidden) {
+    openFeedMenu();
+    return;
+  }
+
+  closeFeedMenu();
+});
+
+selectAllFeedsButtonEl.addEventListener("click", () => {
+  activeFeedIds = availableFeeds.map((feed) => feed.id);
+  renderFeedOptions();
+  updateFeedButtonLabel();
+  loadNews();
+});
+
+clearFeedsButtonEl.addEventListener("click", () => {
+  activeFeedIds = [...defaultFeedIds];
+  renderFeedOptions();
+  updateFeedButtonLabel();
+  loadNews();
+});
+
+document.addEventListener("click", (event) => {
+  if (!feedSelectEl.contains(event.target)) {
+    closeFeedMenu();
+  }
+});
+
 keywordInputEl.value = DEFAULT_KEYWORDS;
 renderSortState();
-loadNews();
+loadFeeds()
+  .then(loadNews)
+  .catch((error) => {
+    statusEl.textContent = "Error";
+    summaryEl.textContent = "Unable to load feed configuration.";
+    messageEl.textContent = error instanceof Error ? error.message : String(error);
+  });
 setInterval(loadNews, POLL_INTERVAL_MS);

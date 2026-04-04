@@ -28,6 +28,10 @@ The parsed resume profile includes fields such as:
 
 This parsed profile is useful for more than job search convenience. It also acts as a validation checkpoint for the resume itself. If critical fields, titles, or skills are not being detected correctly by this parser, that can be an early warning sign that the resume may also perform poorly in ATS-style screening systems. In practical terms, this gives the end user a quick way to inspect whether their resume is likely to surface the right signals or end up filtered out before a recruiter ever sees it.
 
+![Parsed Resume Profile Expanded](./ParsedResumeProfile_Expanded.png)
+
+![Parsed Resume Profile Collapsed](./ParsedResumeProfile_Collapsed.png)
+
 ## Page Behavior
 
 The current page layout is organized around a search workflow:
@@ -39,11 +43,11 @@ The current page layout is organized around a search workflow:
 After a resume is uploaded:
 
 - The file is parsed locally in the browser.
-- The extracted resume data populates the `Parsed Resume Profile` panel.
+- The extracted resume data populates the `Parsed Resume Profile` panel, as shown in `ParsedResumeProfile_Expanded`.
 - The application does **not** automatically run a job query.
 - The user can adjust the search inputs and then click `Query` when ready.
 
-The `Parsed Resume Profile` panel is editable and collapsible. That allows the user to inspect the extracted data first, then collapse it and focus on filtering and reviewing job postings after the profile looks correct.
+The `Parsed Resume Profile` panel is editable and collapsible. In its expanded state, shown in `ParsedResumeProfile_Expanded`, the user can inspect and refine the extracted data. After the profile looks correct, the panel can be collapsed, as shown in `ParsedResumeProfile_Collapsed`, so the user can focus on filtering and reviewing job postings.
 
 The `Matched Jobs` panel shows ranked job results returned from the active provider. Jobs can also be marked with lightweight statuses such as `saved`, `interested`, `applied`, `interview`, or `rejected`. Tracker state is stored locally in browser storage.
 

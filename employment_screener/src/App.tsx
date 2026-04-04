@@ -237,6 +237,12 @@ function App() {
 
   return (
     <div className="app-shell">
+      {isSearching ? (
+        <div className="query-overlay" role="status" aria-live="polite" aria-label="Query in progress">
+          <div className="query-overlay-spinner" aria-hidden="true" />
+        </div>
+      ) : null}
+
       <section className="hero">
         <div className="hero-copy">
           <p className="eyebrow">Resume-led opportunity search</p>

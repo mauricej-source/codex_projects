@@ -91,6 +91,7 @@ function App() {
   const [jobs, setJobs] = useState<ScoredJob[]>([]);
   const [isParsing, setIsParsing] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
+  const [isFiltersCollapsed, setIsFiltersCollapsed] = useState(false);
   const [isProfileCollapsed, setIsProfileCollapsed] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [lastRefresh, setLastRefresh] = useState("");
@@ -287,345 +288,251 @@ function App() {
       </section>
 
       <main className={`content-grid${isProfileCollapsed ? " profile-collapsed" : ""}`}>
-        <div className="side-column left-column">
-          <section className="panel upload-panel">
-            <div className="panel-heading upload-heading">
-              <div className="upload-heading-copy">
-                <div className="upload-title-row">
-                  <h2><FileUp size={18} /> Resume Upload</h2>
-                  <p className="inline-helper-text">PDF or DOCX, up to 5 MB.</p>
-                </div>
-              </div>
-            </div>
-
-            <div className="upload-inline-row">
-              <label className="upload-dropzone">
-                <input type="file" accept=".pdf,.docx" onChange={handleResumeUpload} />
-                <span>{isParsing ? "Parsing resume..." : "Choose a file and extract your profile"}</span>
-              </label>
-
-              <button
-                className="secondary-button upload-reset-button"
-                type="button"
-                disabled={!profile.rawText}
-                onClick={resetPage}
-              >
-                Reset
-              </button>
-            </div>
-
-            {errorMessage ? <p className="error-banner">{errorMessage}</p> : null}
-          </section>
-
-          <section className="panel filters-panel">
-            <button
-              className="primary-button full-width-button"
-              type="button"
-              disabled={isSearching || !profile.rawText}
-              onClick={() => searchJobs(profile)}
-            >
-              <Search size={16} />
-              {isSearching ? "Querying..." : "Query"}
-            </button>
-
-            <div className="section-divider" />
-
-            <div className="panel-heading">
-              <div>
-                <h2><Filter size={18} /> Search Filters</h2>
-                <p>Tighten the list before you spend time reading postings.</p>
-              </div>
-            </div>
-
-            <div className="filters-inline-row">
-              <div className="filter-control filter-minimum-match">
-                <label htmlFor="filter-minimum-match">Minimum match</label>
-                <div className="filter-range-control">
-                  <input
-                    id="filter-minimum-match"
-                    type="range"
-                    min={0}
-                    max={100}
-                    step={5}
-                    value={filters.minimumMatch}
-                    onChange={(event) => setFilters((current) => ({ ...current, minimumMatch: Number(event.target.value) }))}
-                  />
-                  <span className="range-value">{filters.minimumMatch}%</span>
-                </div>
-              </div>
-              <div className="filter-control filter-checkbox-field">
-                <label htmlFor="filter-remote-only">Remote roles only</label>
-                <input
-                  id="filter-remote-only"
-                  type="checkbox"
-                  checked={filters.remoteOnly}
-                  onChange={(event) => applyRemoteOnly(event.target.checked)}
-                />
-              </div>
-            </div>
-
-            <div className="dice-input-panel">
-              <div className="panel-heading dice-preview-heading">
+        <div className="main-column">
+          <section className="panel horizontal-panel-group">
+            <section className={`panel filters-panel${isFiltersCollapsed ? " is-collapsed" : ""}`}>
+              <div className="panel-heading">
                 <div>
-                  <h2><Search size={18} /> Dice Job Portal - Search Criteria</h2>
+                  <div className="upload-title-row">
+                    <h2><FileUp size={18} /> Resume Upload - Search Filters</h2>
+                    <p className="inline-helper-text">PDF or DOCX or DOC, up to 5MB</p>
+                  </div>
                 </div>
+                <button
+                  className="icon-button"
+                  type="button"
+                  onClick={() => setIsFiltersCollapsed((current) => !current)}
+                  aria-expanded={!isFiltersCollapsed}
+                  aria-controls="search-filters-body"
+                >
+                  {isFiltersCollapsed ? <ChevronRight size={16} /> : <ChevronDown size={16} />}
+                  {isFiltersCollapsed ? "Expand" : "Collapse"}
+                </button>
               </div>
 
-              <div className="dice-input-grid">
-                <label>
-                  Current Title:
-                  <input
-                    value={profile.currentTitle}
-                    onChange={(event) =>
-                      setProfile((current) => ({ ...current, currentTitle: event.target.value }))
-                    }
-                  />
-                </label>
+              {!isFiltersCollapsed ? (
+                <div id="search-filters-body" className="filters-panel-body">
+                  <section className="panel upload-panel">
+                    <div className="upload-inline-row">
+                      <label className="upload-dropzone">
+                        <input type="file" accept=".pdf,.docx" onChange={handleResumeUpload} />
+                        <span>{isParsing ? "Parsing resume..." : "Choose a file and extract your profile"}</span>
+                      </label>
+                    </div>
 
-                <label>
-                  Target Titles:
-                  <input
-                    placeholder="Enter target titles separated by commas"
-                    value={targetTitlesInput}
-                    onChange={(event) => {
-                      const nextValue = event.target.value;
-                      setTargetTitlesInput(nextValue);
-                      setProfile((current) => ({
-                        ...current,
-                        targetTitles: nextValue
-                          .split(",")
-                          .map((value) => value.trim())
-                          .filter(Boolean)
-                      }));
-                    }}
-                  />
-                </label>
+                    {errorMessage ? <p className="error-banner">{errorMessage}</p> : null}
+                  </section>
 
-                <label>
-                  Location:
-                  <input
-                    value={profile.diceSearch.location}
-                    onChange={(event) =>
-                      setProfile((current) => ({
-                        ...current,
-                        diceSearch: {
-                          ...current.diceSearch,
-                          location: event.target.value
-                        }
-                      }))
-                    }
-                  />
-                </label>
-
-                <label>
-                  Workplace:
-                  <select
-                    className="compact-multiselect"
-                    multiple
-                    size={workplaceOptions.length}
-                    value={profile.diceSearch.workplaceTypes}
-                    onChange={(event) => {
-                      const nextWorkplaceTypes = Array.from(event.target.selectedOptions).map(
-                        (option) => option.value as WorkMode
-                      );
-                      const remoteOnly = nextWorkplaceTypes.length === 1 && nextWorkplaceTypes[0] === "Remote";
-                      setProfile((current) => ({
-                        ...current,
-                        preferences: {
-                          ...current.preferences,
-                          remoteOnly
-                        },
-                        diceSearch: {
-                          ...current.diceSearch,
-                          workplaceTypes: nextWorkplaceTypes
-                        }
-                      }));
-                      setFilters((current) => ({ ...current, remoteOnly }));
-                    }}
-                  >
-                    {workplaceOptions.map((option) => (
-                      <option key={option} value={option}>
-                        {option}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-
-                <label>
-                  Posted date:
-                  <select
-                    value={profile.diceSearch.postedDate}
-                    onChange={(event) =>
-                      setProfile((current) => ({
-                        ...current,
-                        diceSearch: {
-                          ...current.diceSearch,
-                          postedDate: event.target.value
-                        }
-                      }))
-                    }
-                  >
-                    {postedDateOptions.map((option) => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-
-                <label>
-                  Skills:
-                  <select
-                    multiple
-                    size={Math.min(Math.max(availableSkillOptions.length, 6), 12)}
-                    onChange={(event) =>
-                      setProfile((current) => ({
-                        ...current,
-                        skills: Array.from(event.target.selectedOptions).map((option) => option.value)
-                      }))
-                    }
-                    value={profile.skills}
-                  >
-                    {availableSkillOptions.map((skill) => (
-                      <option key={skill} value={skill}>
-                        {skill}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-
-                {parsedResumeDefaults?.skills.length ? (
-                  <div className="inline-actions">
+                  <div className="filter-action-row">
                     <button
-                      className="secondary-button"
+                      className="secondary-button full-width-button"
                       type="button"
-                      onClick={() =>
-                        setProfile((current) => ({
-                          ...current,
-                          skills: parsedResumeDefaults.skills
-                        }))
-                      }
+                      disabled={!profile.rawText}
+                      onClick={resetPage}
                     >
-                      Use Parsed Resume Skills
+                      Reset
+                    </button>
+
+                    <button
+                      className="primary-button full-width-button"
+                      type="button"
+                      disabled={isSearching || !profile.rawText}
+                      onClick={() => searchJobs(profile)}
+                    >
+                      <Search size={16} />
+                      {isSearching ? "Querying..." : "Query"}
                     </button>
                   </div>
-                ) : null}
 
-                <label>
-                  Keywords:
-                  <textarea
-                    rows={3}
-                    placeholder="Enter one keyword per line"
-                    value={profile.keywords.join("\n")}
-                    onChange={(event) =>
-                      setProfile((current) => ({
-                        ...current,
-                        keywords: event.target.value
-                          .split("\n")
-                          .map((value) => value.trim())
-                          .filter(Boolean)
-                      }))
-                    }
-                  />
-                </label>
-              </div>
-            </div>
-          </section>
+                  <div className="section-divider" />
 
-        </div>
-
-        <div className="main-column">
-          <section className={`panel profile-panel${isProfileCollapsed ? " is-collapsed" : ""}`}>
-            <div className="panel-heading">
-              <div>
-                <div className="upload-title-row">
-                  <h2><CircleHelp size={18} /> Parsed Resume Profile</h2>
-                  <p className="inline-helper-text">Review and refine the extracted signal before searching.</p>
-                </div>
-              </div>
-              <button
-                className="icon-button"
-                type="button"
-                onClick={() => setIsProfileCollapsed((current) => !current)}
-                aria-expanded={!isProfileCollapsed}
-                aria-controls="parsed-resume-profile-body"
-              >
-                {isProfileCollapsed ? <ChevronRight size={16} /> : <ChevronDown size={16} />}
-                {isProfileCollapsed ? "Expand" : "Collapse"}
-              </button>
-            </div>
-
-            {!isProfileCollapsed ? (
-              <div id="parsed-resume-profile-body" className="profile-panel-body">
-                <div className="profile-section-grid">
-                  <div className="profile-fields-grid">
-                    <label>
-                      Full Name
-                      <input value={profile.fullName} onChange={(event) => setProfile((current) => ({ ...current, fullName: event.target.value }))} />
-                    </label>
-                    <label>
-                      Current Title
-                      <input value={profile.currentTitle} onChange={(event) => setProfile((current) => ({ ...current, currentTitle: event.target.value }))} />
-                    </label>
-                    <label>
-                      Email
-                      <input value={profile.email} onChange={(event) => setProfile((current) => ({ ...current, email: event.target.value }))} />
-                    </label>
-                    <label>
-                      Phone
-                      <input value={profile.phone} onChange={(event) => setProfile((current) => ({ ...current, phone: event.target.value }))} />
-                    </label>
-                    <label>
-                      Website
-                      <input value={profile.website} onChange={(event) => setProfile((current) => ({ ...current, website: event.target.value }))} />
-                    </label>
+                  <div className="filters-inline-row">
+                    <div className="filter-control filter-minimum-match">
+                      <label htmlFor="filter-minimum-match">Minimum match</label>
+                      <div className="filter-range-control">
+                        <input
+                          id="filter-minimum-match"
+                          type="range"
+                          min={0}
+                          max={100}
+                          step={5}
+                          value={filters.minimumMatch}
+                          onChange={(event) => setFilters((current) => ({ ...current, minimumMatch: Number(event.target.value) }))}
+                        />
+                        <span className="range-value">{filters.minimumMatch}%</span>
+                      </div>
+                    </div>
+                    <div className="filter-control filter-checkbox-field">
+                      <label htmlFor="filter-remote-only">Remote roles only</label>
+                      <input
+                        id="filter-remote-only"
+                        type="checkbox"
+                        checked={filters.remoteOnly}
+                        onChange={(event) => applyRemoteOnly(event.target.checked)}
+                      />
+                    </div>
                   </div>
 
-                  <div className="profile-side-column">
-                    <div className="profile-fields-grid">
+                  <div className="dice-input-panel">
+                    <div className="panel-heading dice-preview-heading">
+                      <div>
+                        <h2><Search size={18} /> Dice Job Portal - Search Criteria</h2>
+                      </div>
+                    </div>
+
+                    <div className="dice-input-grid">
                       <label>
-                        LinkedIn
-                        <input value={profile.linkedIn} onChange={(event) => setProfile((current) => ({ ...current, linkedIn: event.target.value }))} />
-                      </label>
-                      <label>
-                        Location
+                        Current Title:
                         <input
-                          value={profile.location}
+                          value={profile.currentTitle}
+                          onChange={(event) =>
+                            setProfile((current) => ({ ...current, currentTitle: event.target.value }))
+                          }
+                        />
+                      </label>
+
+                      <label>
+                        Target Titles:
+                        <input
+                          placeholder="Enter target titles separated by commas"
+                          value={targetTitlesInput}
                           onChange={(event) => {
-                            const value = event.target.value;
+                            const nextValue = event.target.value;
+                            setTargetTitlesInput(nextValue);
                             setProfile((current) => ({
                               ...current,
-                              location: value,
-                              preferences: {
-                                ...current.preferences,
-                                preferredLocations: value ? [value] : []
-                              }
+                              targetTitles: nextValue
+                                .split(",")
+                                .map((value) => value.trim())
+                                .filter(Boolean)
                             }));
                           }}
                         />
                       </label>
+
                       <label>
-                        Work Authorization
-                        <input value={profile.workAuthorization} onChange={(event) => setProfile((current) => ({ ...current, workAuthorization: event.target.value }))} />
-                      </label>
-                      <label>
-                        Years of Experience
+                        Location:
                         <input
-                          type="number"
-                          min={0}
-                          value={profile.yearsExperience}
-                          onChange={(event) => setProfile((current) => ({ ...current, yearsExperience: Number(event.target.value || 0) }))}
-                        />
-                      </label>
-                      <label className="checkbox checkbox-field">
-                        <span>Remote Only</span>
-                        <input
-                          type="checkbox"
-                          checked={profile.preferences.remoteOnly}
+                          value={profile.diceSearch.location}
                           onChange={(event) =>
                             setProfile((current) => ({
                               ...current,
-                              preferences: { ...current.preferences, remoteOnly: event.target.checked }
+                              diceSearch: {
+                                ...current.diceSearch,
+                                location: event.target.value
+                              }
+                            }))
+                          }
+                        />
+                      </label>
+
+                      <label>
+                        Workplace:
+                        <select
+                          className="compact-multiselect"
+                          multiple
+                          size={workplaceOptions.length}
+                          value={profile.diceSearch.workplaceTypes}
+                          onChange={(event) => {
+                            const nextWorkplaceTypes = Array.from(event.target.selectedOptions).map(
+                              (option) => option.value as WorkMode
+                            );
+                            const remoteOnly = nextWorkplaceTypes.length === 1 && nextWorkplaceTypes[0] === "Remote";
+                            setProfile((current) => ({
+                              ...current,
+                              preferences: {
+                                ...current.preferences,
+                                remoteOnly
+                              },
+                              diceSearch: {
+                                ...current.diceSearch,
+                                workplaceTypes: nextWorkplaceTypes
+                              }
+                            }));
+                            setFilters((current) => ({ ...current, remoteOnly }));
+                          }}
+                        >
+                          {workplaceOptions.map((option) => (
+                            <option key={option} value={option}>
+                              {option}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+
+                      <label>
+                        Posted date:
+                        <select
+                          value={profile.diceSearch.postedDate}
+                          onChange={(event) =>
+                            setProfile((current) => ({
+                              ...current,
+                              diceSearch: {
+                                ...current.diceSearch,
+                                postedDate: event.target.value
+                              }
+                            }))
+                          }
+                        >
+                          {postedDateOptions.map((option) => (
+                            <option key={option.value} value={option.value}>
+                              {option.label}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+
+                      <label>
+                        Skills:
+                        <select
+                          multiple
+                          size={Math.min(Math.max(availableSkillOptions.length, 6), 12)}
+                          onChange={(event) =>
+                            setProfile((current) => ({
+                              ...current,
+                              skills: Array.from(event.target.selectedOptions).map((option) => option.value)
+                            }))
+                          }
+                          value={profile.skills}
+                        >
+                          {availableSkillOptions.map((skill) => (
+                            <option key={skill} value={skill}>
+                              {skill}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+
+                      {parsedResumeDefaults?.skills.length ? (
+                        <div className="inline-actions">
+                          <button
+                            className="secondary-button"
+                            type="button"
+                            onClick={() =>
+                              setProfile((current) => ({
+                                ...current,
+                                skills: parsedResumeDefaults.skills
+                              }))
+                            }
+                          >
+                            Use Parsed Resume Skills
+                          </button>
+                        </div>
+                      ) : null}
+
+                      <label>
+                        Keywords:
+                        <textarea
+                          rows={3}
+                          placeholder="Enter one keyword per line"
+                          value={profile.keywords.join("\n")}
+                          onChange={(event) =>
+                            setProfile((current) => ({
+                              ...current,
+                              keywords: event.target.value
+                                .split("\n")
+                                .map((value) => value.trim())
+                                .filter(Boolean)
                             }))
                           }
                         />
@@ -633,33 +540,135 @@ function App() {
                     </div>
                   </div>
                 </div>
+              ) : null}
+            </section>
 
-                <label className="summary-panel">
-                  Summary
-                  <textarea
-                    rows={6}
-                    className="summary-textarea"
-                    value={profile.summary}
-                    onChange={(event) => setProfile((current) => ({ ...current, summary: event.target.value }))}
-                  />
-                </label>
+            <section className={`panel profile-panel${isProfileCollapsed ? " is-collapsed" : ""}`}>
+              <div className="panel-heading">
+                <div>
+                  <div className="upload-title-row">
+                    <h2><CircleHelp size={18} /> Parsed Resume Profile</h2>
+                    <p className="inline-helper-text">Review and refine the extracted signal before searching.</p>
+                  </div>
+                </div>
+                <button
+                  className="icon-button"
+                  type="button"
+                  onClick={() => setIsProfileCollapsed((current) => !current)}
+                  aria-expanded={!isProfileCollapsed}
+                  aria-controls="parsed-resume-profile-body"
+                >
+                  {isProfileCollapsed ? <ChevronRight size={16} /> : <ChevronDown size={16} />}
+                  {isProfileCollapsed ? "Expand" : "Collapse"}
+                </button>
+              </div>
 
-                <div className="profile-skills-section">
-                  {displayedSkills.length ? (
-                    <div className="skill-groups">
-                      <div className="skill-group-card">
-                        <strong>Skills</strong>
-                        <div className="chip-row">
-                          {displayedSkills.map((skill) => (
-                            <span key={skill} className="chip">{skill}</span>
-                          ))}
-                        </div>
+              {!isProfileCollapsed ? (
+                <div id="parsed-resume-profile-body" className="profile-panel-body">
+                  <div className="profile-section-grid">
+                    <div className="profile-fields-grid">
+                      <label>
+                        Full Name
+                        <input value={profile.fullName} onChange={(event) => setProfile((current) => ({ ...current, fullName: event.target.value }))} />
+                      </label>
+                      <label>
+                        Current Title
+                        <input value={profile.currentTitle} onChange={(event) => setProfile((current) => ({ ...current, currentTitle: event.target.value }))} />
+                      </label>
+                      <label>
+                        Email
+                        <input value={profile.email} onChange={(event) => setProfile((current) => ({ ...current, email: event.target.value }))} />
+                      </label>
+                      <label>
+                        Phone
+                        <input value={profile.phone} onChange={(event) => setProfile((current) => ({ ...current, phone: event.target.value }))} />
+                      </label>
+                      <label>
+                        Website
+                        <input value={profile.website} onChange={(event) => setProfile((current) => ({ ...current, website: event.target.value }))} />
+                      </label>
+                    </div>
+
+                    <div className="profile-side-column">
+                      <div className="profile-fields-grid">
+                        <label>
+                          LinkedIn
+                          <input value={profile.linkedIn} onChange={(event) => setProfile((current) => ({ ...current, linkedIn: event.target.value }))} />
+                        </label>
+                        <label>
+                          Location
+                          <input
+                            value={profile.location}
+                            onChange={(event) => {
+                              const value = event.target.value;
+                              setProfile((current) => ({
+                                ...current,
+                                location: value,
+                                preferences: {
+                                  ...current.preferences,
+                                  preferredLocations: value ? [value] : []
+                                }
+                              }));
+                            }}
+                          />
+                        </label>
+                        <label>
+                          Work Authorization
+                          <input value={profile.workAuthorization} onChange={(event) => setProfile((current) => ({ ...current, workAuthorization: event.target.value }))} />
+                        </label>
+                        <label>
+                          Years of Experience
+                          <input
+                            type="number"
+                            min={0}
+                            value={profile.yearsExperience}
+                            onChange={(event) => setProfile((current) => ({ ...current, yearsExperience: Number(event.target.value || 0) }))}
+                          />
+                        </label>
+                        <label className="checkbox checkbox-field">
+                          <span>Remote Only</span>
+                          <input
+                            type="checkbox"
+                            checked={profile.preferences.remoteOnly}
+                            onChange={(event) =>
+                              setProfile((current) => ({
+                                ...current,
+                                preferences: { ...current.preferences, remoteOnly: event.target.checked }
+                              }))
+                            }
+                          />
+                        </label>
                       </div>
                     </div>
-                  ) : null}
                 </div>
-              </div>
-            ) : null}
+
+                  <label className="summary-panel">
+                    Summary
+                    <textarea
+                      rows={6}
+                      className="summary-textarea"
+                      value={profile.summary}
+                      onChange={(event) => setProfile((current) => ({ ...current, summary: event.target.value }))}
+                    />
+                  </label>
+
+                  <div className="profile-skills-section">
+                    {displayedSkills.length ? (
+                      <div className="skill-groups">
+                        <div className="skill-group-card">
+                          <strong>Skills</strong>
+                          <div className="chip-row">
+                            {displayedSkills.map((skill) => (
+                              <span key={skill} className="chip">{skill}</span>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    ) : null}
+                  </div>
+                </div>
+              ) : null}
+            </section>
           </section>
 
           <section className="panel results-panel">

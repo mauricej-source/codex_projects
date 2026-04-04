@@ -1,0 +1,74 @@
+
+https://www.dice.com/home-feed?utm_source=job_alerts&utm_medium=email&utm_content=savedsearchalerts&utm_campaign=10016194&%243p=e_iterable
+
+
+https://builtin.com/?i=24198414-f6cb-4e99-ab11-924eecc61377&preference_id=a599a41a-b37b-482e-9d02-2a5b3d95eef0
+https://www.monster.com/
+https://nomadcareers.online/jobs
+
+Not viable, involves scrapping, which the sites prevent
+https://www.indeed.com/
+https://www.ziprecruiter.com/jobseeker/home?tsid=111000290
+https://www.simplyhired.com/
+
+
+
+
+
+
+Top Job Search APIs
+JSearch (OpenWeb Ninja): Offers real-time job listings and salary data, often used on RapidAPI.
+Jooble API: A major job aggregator with a dedicated search API.
+Findwork: Provides a simple API to access job board data.
+Techmap / JobDataFeeds: Aggregates millions of international jobs from Career Pages and Job Boards.
+TheirStack: Specializes in accessing job postings from LinkedIn, Indeed, and Glassdoor.
+USAJOBS API: Official API for US government job board.
+SerpApi (Google Jobs): Allows scraping of Google Jobs search results. 
+TheirStack.com
+TheirStack.com
+ +4
+Aggregators and Data Providers
+PR Labs (via RapidAPI): Provides access to LinkedIn, Indeed, and ZipRecruiter.
+WebAutomation.io: Offers pre-built scrapers for major job boards.
+Mantiks:
+
+
+
+
+-- -----------------------------------------------
+Likely Integratable Now
+-- -----------------------------------------------
+
+USAJOBS: strongest option because it has an official public API and stable docs. Best if federal roles are useful to you. Source: USAJOBS API
+Official federal-jobs API. Strong source, but only for U.S. government jobs.
+
+Adzuna: also a realistic add if you want a broader aggregator with an official developer API. Source: Adzuna API
+Official search API for job ads. Good fit if you want another broad aggregator.
+
+-- -----------------------------------------------
+Possible With Partner Approval
+-- -----------------------------------------------
+
+Monster: plausible, but it looks employer/partner-oriented rather than public-search-API-oriented. Their employer site explicitly mentions ATS integration and partner paths, which suggests access may be possible through business channels, not a simple self-serve search API. Sources: Monster job site, Monster for Employers, Partner with Monster
+
+ZipRecruiter: same general category. Worth checking if you can get partner access, but not as clean as Dice/USAJOBS from an implementation-risk standpoint. Source: ZipRecruiter Partner Platform
+
+-- -----------------------------------------------
+Avoid Unless Scraping Is Acceptable
+-- -----------------------------------------------
+
+Built In: I found a consumer-facing job/search site, but no public developer search API. Source: Built In
+
+Nomad Careers: niche remote-job site, but I found no API/docs; the site even exposes a crawler-only prerender entrypoint, which is a sign of JS rendering, not official integration support. Source: Nomad Careers
+
+SimplyHired, Indeed: usually fall into the same bucket unless you have a specific approved relationship.
+
+-- -----------------------------------------------
+If you want the safest next move, I’d rank them:
+
+USAJOBS
+Adzuna
+Monster only if you confirm partner/API access
+
+
+**everything else only if you’re willing to accept scraping risk**

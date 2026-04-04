@@ -256,7 +256,7 @@ function App() {
           <div className="panel-heading">
             <div>
               <h2><Save size={18} /> Job Tracker</h2>
-              <p>Persisted locally in the browser for lightweight follow-up tracking.</p>
+              <p className="eyebrow">Persisted locally in the browser for lightweight follow-up tracking.</p>
             </div>
           </div>
 

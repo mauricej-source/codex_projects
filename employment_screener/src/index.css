@@ -2,9 +2,7 @@
   font-size: 84%;
   font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
   color: #132238;
-  background:
-    radial-gradient(circle at top left, rgba(255, 222, 173, 0.6), transparent 30%),
-    linear-gradient(180deg, #f7f2e8 0%, #f3f7fb 48%, #eef2f7 100%);
+  background: linear-gradient(#2d5f7c, #f3f6f7);
   line-height: 1.5;
   font-weight: 400;
   color-scheme: light;
@@ -51,7 +49,13 @@ a {
 }
 
 .hero-copy,
-.hero-card,
+.hero-card {
+  border: 1px solid rgba(19, 34, 56, 0.08);
+  border-radius: 12px;
+  backdrop-filter: blur(16px);
+  box-shadow: 0 18px 50px rgba(64, 78, 95, 0.08);
+}
+
 .panel {
   background: rgba(255, 255, 255, 0.78);
   border: 1px solid rgba(19, 34, 56, 0.08);
@@ -61,16 +65,20 @@ a {
 }
 
 .hero-copy {
+  background: rgba(67, 67, 75, 0.7);
   padding: 32px;
+  color: #f3f6f7;
 }
 
 .hero-card {
+  background: rgba(67, 67, 75, 0.7);
   padding: 24px;
   display: grid;
   gap: 16px;
   align-content: start;
   max-height: 28rem;
   overflow-y: auto;
+  color: #f3f6f7;
 }
 
 .eyebrow {
@@ -78,7 +86,7 @@ a {
   text-transform: uppercase;
   letter-spacing: 0.1em;
   font-size: 0.78rem;
-  color: #9b5b2f;
+  color: #f3f6f7;
 }
 
 h1,
@@ -94,10 +102,20 @@ h1 {
   margin-bottom: 14px;
 }
 
+.hero-copy h1 {
+  color: #3d79a1 !important;
+}
+
+.hero-card .panel-heading h2,
+.hero-card .panel-heading h2 svg,
+.hero-card .eyebrow {
+  color: #8eb7d1 !important;
+}
+
 .hero-text {
   font-size: 1.02rem;
   max-width: 60ch;
-  color: #3b4b61;
+  color: rgba(243, 246, 247, 0.88);
 }
 
 .hero-pills,
@@ -107,22 +125,36 @@ h1 {
   gap: 10px;
 }
 
-.hero-pills span,
+.hero-pills span {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border-radius: 999px;
+  padding: 8px 12px;
+  background: rgba(243, 246, 247, 0.14);
+  color: #f3f6f7;
+}
+
 .chip,
 .score-pill,
 .status-pill {
   display: inline-flex;
   align-items: center;
   gap: 8px;
+  border: 1px solid #3d79a1;
   border-radius: 999px;
   padding: 8px 12px;
-  background: #edf4ff;
-  color: #1b4d8d;
+  background: #ffffff;
+  color: #f3f6f7;
+}
+
+.status-pill {
+  color: #28516b;
 }
 
 .stat span {
   display: block;
-  color: #63758a;
+  color: rgba(243, 246, 247, 0.76);
   font-size: 0.88rem;
 }
 
@@ -348,6 +380,13 @@ h1 {
 .profile-skills-section {
   display: grid;
   gap: 16px;
+  color: #000;
+}
+
+.profile-skills-section strong,
+.profile-skills-section p,
+.profile-skills-section .chip {
+  color: #000;
 }
 
 .upload-inline-row {

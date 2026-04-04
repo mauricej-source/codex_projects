@@ -4,16 +4,24 @@ Employment Portal Screener is a resume-led job search MVP. The application lets 
 
 The current implementation is designed to be practical and explainable. Instead of treating job matching as a black box, the app exposes the candidate profile that was parsed from the resume, lets the user adjust search criteria before querying, and scores returned jobs against the profile so the user can quickly focus on likely-fit roles.
 
-## What The Application Does
+## Application Functionality
 
 At a high level, the application supports this workflow:
 
 1. Upload a resume in `PDF` or `DOCX` format.
-2. Parse the resume client-side into a candidate profile.
-3. Review the parsed resume data and validate that important signals were detected.
-4. Configure search criteria for the current job portal provider.
-5. Run a query against the provider.
+2. Parse the resume client-side into a structured candidate profile.
+3. Review and refine the extracted resume data before searching.
+4. Configure search criteria for the active job provider.
+5. Run a query against that provider.
 6. Review matched jobs and optionally track them locally in the browser.
+
+The page layout is organized around that workflow:
+
+- Left side: resume upload and search/filter controls
+- Main content area: parsed resume profile and matched jobs
+- Top tracker card: a lightweight local job tracker
+
+After a resume is uploaded, the file is parsed locally in the browser and the extracted data populates the `Parsed Resume Profile` panel, as shown in `ParsedResumeProfile_Expanded`. The application does **not** automatically run a job query. The user can review the parsed data, adjust search inputs, and then click `Query` when ready.
 
 The parsed resume profile includes fields such as:
 
@@ -26,52 +34,22 @@ The parsed resume profile includes fields such as:
 - Resume summary
 - Parsed skills
 
-This parsed profile is useful for more than job search convenience. It also acts as a validation checkpoint for the resume itself. If critical fields, titles, or skills are not being detected correctly by this parser, that can be an early warning sign that the resume may also perform poorly in ATS-style screening systems. In practical terms, this gives the end user a quick way to inspect whether their resume is likely to surface the right signals or end up filtered out before a recruiter ever sees it.
-
-![Parsed Resume Profile Expanded](./ParsedResumeProfile_Expanded.png)
-
-![Parsed Resume Profile Collapsed](./ParsedResumeProfile_Collapsed.png)
-
-## Page Behavior
-
-The current page layout is organized around a search workflow:
-
-- Left side: resume upload and search/filter controls
-- Main content area: parsed resume profile and matched jobs
-- Top tracker card: a lightweight local job tracker
-
-After a resume is uploaded:
-
-- The file is parsed locally in the browser.
-- The extracted resume data populates the `Parsed Resume Profile` panel, as shown in `ParsedResumeProfile_Expanded`.
-- The application does **not** automatically run a job query.
-- The user can adjust the search inputs and then click `Query` when ready.
-
 The `Parsed Resume Profile` panel is editable and collapsible. In its expanded state, shown in `ParsedResumeProfile_Expanded`, the user can inspect and refine the extracted data. After the profile looks correct, the panel can be collapsed, as shown in `ParsedResumeProfile_Collapsed`, so the user can focus on filtering and reviewing job postings.
 
 The `Matched Jobs` panel shows ranked job results returned from the active provider. Jobs can also be marked with lightweight statuses such as `saved`, `interested`, `applied`, `interview`, or `rejected`. Tracker state is stored locally in browser storage.
-
-## Resume Parsing And ATS Validation Value
 
 Resume parsing is done client-side. The application extracts text from:
 
 - `PDF` files using `pdfjs-dist`
 - `DOCX` files using `mammoth`
 
-That raw text is then processed into a structured candidate profile used by the application for:
+That raw text is then processed into a structured candidate profile used for search criteria defaults, matching and scoring, and resume review and correction.
 
-- Search criteria defaults
-- Matching and scoring
-- Resume review and correction
+This parsing step is useful for more than job search convenience. It also acts as an ATS validation checkpoint. If job titles, key skills, summary content, or contact details are not being extracted cleanly, that can be an early signal that other automated systems may also struggle to interpret the resume correctly.
 
-This parsing step is valuable because it provides immediate feedback on whether the resume communicates the right information in a machine-readable way. Many end users think of resume review as a formatting or writing exercise, but this app also treats it as an ATS sanity check:
+![Parsed Resume Profile Expanded](./ParsedResumeProfile_Expanded.png)
 
-- Are job titles being recognized clearly?
-- Are key skills being extracted?
-- Is the summary coherent after text extraction?
-- Are contact details and profile links detectable?
-
-If the parser struggles to recover key data, that is often a signal that other automated systems may struggle too.
+![Parsed Resume Profile Collapsed](./ParsedResumeProfile_Collapsed.png)
 
 ## Current Job Provider Integration
 

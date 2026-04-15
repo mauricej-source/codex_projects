@@ -17,10 +17,14 @@ const feedSelectMenuEl = document.getElementById("feedSelectMenu");
 const feedOptionsEl = document.getElementById("feedOptions");
 const selectAllFeedsButtonEl = document.getElementById("selectAllFeedsButton");
 const clearFeedsButtonEl = document.getElementById("clearFeedsButton");
+const toggleTopPanelButtonEl = document.getElementById("toggleTopPanelButton");
+const topCardEl = document.querySelector(".top-card");
 
 const DEFAULT_KEYWORDS =
   "strategic|partnership|collaboration|MOU|accelerated|growth|artificial|intelligence|trump|IPO";
 const FEED_SEPARATOR = "|";
+const KEYWORDS_STORAGE_KEY = "news-scanner.keywords";
+const TOP_PANEL_COLLAPSED_STORAGE_KEY = "news-scanner.top-panel-collapsed";
 let currentKeywordString = DEFAULT_KEYWORDS;
 let currentItems = [];
 let allKeywords = DEFAULT_KEYWORDS.split("|");
@@ -165,6 +169,27 @@ function getSortedItems(items) {
   return currentSort.direction === "asc" ? sorted : sorted.reverse();
 }
 
+function groupItemsByTicker(items) {
+  const tickerGroups = new Map();
+
+  getSortedItems(items).forEach((item) => {
+    const primaryTicker = item.ticker || "N/A";
+
+    if (!tickerGroups.has(primaryTicker)) {
+      tickerGroups.set(primaryTicker, []);
+    }
+
+    tickerGroups.get(primaryTicker).push(item);
+  });
+
+  return Array.from(tickerGroups.entries())
+    .sort((left, right) => left[0].localeCompare(right[0], undefined, { sensitivity: "base" }))
+    .map(([ticker, groupedItems]) => ({
+      ticker,
+      items: groupedItems,
+    }));
+}
+
 function renderSortState() {
   sortButtonEls.forEach((button) => {
     button.classList.remove("is-active", "is-active-desc");
@@ -181,30 +206,39 @@ function renderRows(items) {
   }
 
   messageEl.textContent = "";
-  tableBodyEl.innerHTML = getSortedItems(items)
+  tableBodyEl.innerHTML = groupItemsByTicker(items)
     .map(
-      (item) => `
-        <tr>
-          <td data-label="Keyword"><span class="keyword-pill">${item.keyword}</span></td>
-          <td data-label="News Feed">${item.providerName || "N/A"}</td>
-          <td data-label="News Source">${item.source}</td>
-          <td data-label="News Title">${item.headline || "N/A"}</td>
-          <td data-label="Time Reported" class="mono">${formatTimestamp(item.timeReported)}</td>
-          <td data-label="Stock Ticker Symbol" class="mono ${(item.tickers || []).length ? "" : "muted-cell"}">${
-            (item.tickers || []).length ? item.tickers.join(", ") : "N/A"
-          }</td>
-          <td data-label="News Link"><a href="${item.articleUrl}" target="_blank" rel="noreferrer">Open Article</a></td>
-          <td data-label="Technical Chart">${
-            (item.finvizUrls || []).length
-              ? item.finvizUrls
-                  .map((url, index) => {
-                    const label = (item.tickers || [])[index] || `Chart ${index + 1}`;
-                    return `<a href="${url}" target="_blank" rel="noreferrer">${label}</a>`;
-                  })
-                  .join(" | ")
-              : `<span class="muted-cell">N/A</span>`
-          }</td>
+      (tickerGroup) => `
+        <tr class="group-row group-row-ticker">
+          <td colspan="8">Ticker: ${tickerGroup.ticker}</td>
         </tr>
+        ${tickerGroup.items
+          .map(
+            (item) => `
+              <tr>
+                <td data-label="Keyword"><span class="keyword-pill">${item.keyword}</span></td>
+                <td data-label="News Feed">${item.providerName || "N/A"}</td>
+                <td data-label="News Source">${item.source}</td>
+                <td data-label="News Title">${item.headline || "N/A"}</td>
+                <td data-label="Time Reported" class="mono">${formatTimestamp(item.timeReported)}</td>
+                <td data-label="Stock Ticker Symbol" class="mono ${(item.tickers || []).length ? "" : "muted-cell"}">${
+                  (item.tickers || []).length ? item.tickers.join(", ") : "N/A"
+                }</td>
+                <td data-label="News Link"><a href="${item.articleUrl}" target="_blank" rel="noreferrer">Open Article</a></td>
+                <td data-label="Technical Chart">${
+                  (item.finvizUrls || []).length
+                    ? item.finvizUrls
+                        .map((url, index) => {
+                          const label = (item.tickers || [])[index] || `Chart ${index + 1}`;
+                          return `<a href="${url}" target="_blank" rel="noreferrer">${label}</a>`;
+                        })
+                        .join(" | ")
+                    : `<span class="muted-cell">N/A</span>`
+                }</td>
+              </tr>
+            `
+          )
+          .join("")}
       `
     )
     .join("");
@@ -216,6 +250,70 @@ function normalizeKeywordInput(value) {
     .map((keyword) => keyword.trim())
     .filter(Boolean)
     .join("|");
+}
+
+function readStoredKeywords() {
+  try {
+    return normalizeKeywordInput(window.localStorage.getItem(KEYWORDS_STORAGE_KEY) || "");
+  } catch {
+    return "";
+  }
+}
+
+function persistKeywords(keywordString) {
+  try {
+    window.localStorage.setItem(KEYWORDS_STORAGE_KEY, keywordString);
+  } catch {
+    // Ignore storage failures and keep the session state in memory.
+  }
+}
+
+function initializeKeywords() {
+  const storedKeywords = readStoredKeywords();
+  const initialKeywordString = storedKeywords || DEFAULT_KEYWORDS;
+
+  currentKeywordString = initialKeywordString;
+  allKeywords = initialKeywordString.split("|").filter(Boolean);
+  activeKeywords = [...allKeywords];
+  keywordInputEl.value = initialKeywordString;
+}
+
+function readStoredTopPanelState() {
+  try {
+    return window.localStorage.getItem(TOP_PANEL_COLLAPSED_STORAGE_KEY) === "true";
+  } catch {
+    return false;
+  }
+}
+
+function persistTopPanelState(isCollapsed) {
+  try {
+    window.localStorage.setItem(TOP_PANEL_COLLAPSED_STORAGE_KEY, String(isCollapsed));
+  } catch {
+    // Ignore storage failures and keep the session state in memory.
+  }
+}
+
+function setTopPanelCollapsed(isCollapsed) {
+  topCardEl.classList.toggle("is-collapsed", isCollapsed);
+  toggleTopPanelButtonEl.textContent = isCollapsed ? "Expand Top Panel" : "Collapse Top Panel";
+  toggleTopPanelButtonEl.setAttribute("aria-expanded", String(!isCollapsed));
+}
+
+function initializeTopPanel() {
+  setTopPanelCollapsed(readStoredTopPanelState());
+}
+
+function applyKeywordsFromInput() {
+  const normalized = normalizeKeywordInput(keywordInputEl.value || "");
+  const nextKeywordString = normalized || DEFAULT_KEYWORDS;
+
+  persistKeywords(nextKeywordString);
+  keywordInputEl.value = nextKeywordString;
+  allKeywords = nextKeywordString.split("|").filter(Boolean);
+  activeKeywords = [...allKeywords];
+  currentKeywordString = nextKeywordString;
+  loadNews();
 }
 
 async function loadNews() {
@@ -263,12 +361,11 @@ async function loadNews() {
 }
 
 refreshButtonEl.addEventListener("click", loadNews);
-applyKeywordsButtonEl.addEventListener("click", () => {
-  const normalized = normalizeKeywordInput(keywordInputEl.value || "");
-  allKeywords = (normalized || DEFAULT_KEYWORDS).split("|").filter(Boolean);
-  activeKeywords = [...allKeywords];
-  currentKeywordString = activeKeywords.join("|");
-  loadNews();
+applyKeywordsButtonEl.addEventListener("click", applyKeywordsFromInput);
+keywordInputEl.addEventListener("keydown", (event) => {
+  if (event.key !== "Enter") return;
+  event.preventDefault();
+  applyKeywordsFromInput();
 });
 sortButtonEls.forEach((button) => {
   button.addEventListener("click", () => {
@@ -310,13 +407,20 @@ clearFeedsButtonEl.addEventListener("click", () => {
   loadNews();
 });
 
+toggleTopPanelButtonEl.addEventListener("click", () => {
+  const isCollapsed = !topCardEl.classList.contains("is-collapsed");
+  setTopPanelCollapsed(isCollapsed);
+  persistTopPanelState(isCollapsed);
+});
+
 document.addEventListener("click", (event) => {
   if (!feedSelectEl.contains(event.target)) {
     closeFeedMenu();
   }
 });
 
-keywordInputEl.value = DEFAULT_KEYWORDS;
+initializeKeywords();
+initializeTopPanel();
 renderSortState();
 loadFeeds()
   .then(loadNews)

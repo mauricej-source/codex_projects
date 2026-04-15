@@ -98,6 +98,27 @@ const FEED_PROVIDERS = [
     mode: "keyword-search",
   },
   {
+    id: "globenewswire",
+    name: "GlobeNewswire",
+    description: "GlobeNewswire press releases for contract wins, partnerships, and company updates",
+    mode: "keyword-search",
+    searchDomains: ["globenewswire.com"],
+  },
+  {
+    id: "business-wire",
+    name: "Business Wire",
+    description: "Business Wire press releases for contracts, partnerships, and corporate actions",
+    mode: "keyword-search",
+    searchDomains: ["businesswire.com"],
+  },
+  {
+    id: "quiver-quantitative",
+    name: "Quiver Quantitative",
+    description: "Quiver Quantitative news for retail momentum and narrative shifts",
+    mode: "keyword-search",
+    searchDomains: ["quiverquant.com"],
+  },
+  {
     id: "nasdaq-markets",
     name: "Nasdaq Markets",
     description: "Nasdaq market and company headlines",
@@ -139,12 +160,18 @@ function getDefaultFeedIds() {
   return ["google-news", "nasdaq-markets"];
 }
 
-function escapeQuery(keyword) {
-  return encodeURIComponent(`"${keyword}" stock market finance when:${MAX_ITEM_AGE_DAYS}d`);
+function buildKeywordSearchQuery(keyword, provider) {
+  const domainClause = Array.isArray(provider.searchDomains) && provider.searchDomains.length
+    ? ` (${provider.searchDomains.map((domain) => `site:${domain}`).join(" OR ")})`
+    : "";
+
+  return encodeURIComponent(
+    `"${keyword}" stock market finance when:${MAX_ITEM_AGE_DAYS}d${domainClause}`
+  );
 }
 
-function buildFeedUrl(keyword) {
-  return `https://news.google.com/rss/search?q=${escapeQuery(keyword)}&hl=en-US&gl=US&ceid=US:en`;
+function buildFeedUrl(keyword, provider) {
+  return `https://news.google.com/rss/search?q=${buildKeywordSearchQuery(keyword, provider)}&hl=en-US&gl=US&ceid=US:en`;
 }
 
 async function parseFeedFromUrl(url) {
@@ -428,12 +455,10 @@ function dedupeItems(items) {
   return output;
 }
 
-async function fetchKeywordFeed(keyword) {
-  const feed = await parseFeedFromUrl(buildFeedUrl(keyword));
+async function fetchKeywordFeed(provider, keyword) {
+  const feed = await parseFeedFromUrl(buildFeedUrl(keyword, provider));
   const items = Array.isArray(feed.items) ? feed.items : [];
-  const normalizedItems = items.map((item) =>
-    normalizeProviderItem(item, keyword, FEED_PROVIDER_MAP.get("google-news"))
-  );
+  const normalizedItems = items.map((item) => normalizeProviderItem(item, keyword, provider));
   return Promise.all(normalizedItems.map(enrichTickersFromHeadline));
 }
 
@@ -474,7 +499,7 @@ async function fetchNewsForKeywords(keywords, feedIds) {
         fetchJobs.push({
           provider,
           keyword,
-          run: () => fetchKeywordFeed(keyword),
+          run: () => fetchKeywordFeed(provider, keyword),
         });
       });
       return;

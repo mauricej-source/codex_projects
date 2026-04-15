@@ -15,6 +15,11 @@
   <body>
     <div class="page-shell">
       <section class="top-card">
+        <div class="top-card-toolbar">
+          <button id="toggleTopPanelButton" class="panel-toggle-button" type="button" aria-expanded="true">
+            Collapse Top Panel
+          </button>
+        </div>
         <header class="hero">
           <div>
             <p class="eyebrow">Live Monitor</p>
@@ -62,9 +67,9 @@
                 type="text"
                 autocomplete="off"
                 spellcheck="false"
-                placeholder="strategic|partnership|collaboration|MOU|accelerated|growth|artificial|intelligence|trump"
+                placeholder="strategic|partnership|collaboration|MOU|accelerated|growth|artificial|intelligence|trump|IPO"
               />
-              <button id="applyKeywordsButton" type="button">Apply Keywords</button>
+              <button id="applyKeywordsButton" type="button">Update Keywords</button>
             </div>
           </div>
           <div id="keywordChips" class="chips"></div>

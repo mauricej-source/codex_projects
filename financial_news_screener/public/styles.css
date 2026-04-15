@@ -90,10 +90,33 @@ h1 {
 .top-card {
   position: relative;
   z-index: 20;
+  width: min(150%, calc(100vw - 32px));
+  max-width: none;
+  margin-left: max(-25%, calc((100% - (100vw - 32px)) / 2));
   overflow: visible;
   background: #175a5e;
   border-radius: 18px;
   box-shadow: 0 0 24px #a0c3e8;
+}
+
+.top-card-toolbar {
+  display: flex;
+  justify-content: flex-end;
+  padding: 16px 24px 0;
+}
+
+.panel-toggle-button {
+  padding: 10px 16px;
+}
+
+.top-card.is-collapsed {
+  padding-bottom: 16px;
+}
+
+.top-card.is-collapsed .hero,
+.top-card.is-collapsed .feed-controls,
+.top-card.is-collapsed .filters {
+  display: none;
 }
 
 .meta-card {
@@ -254,6 +277,9 @@ h1 {
 .table-card {
   position: relative;
   z-index: 1;
+  width: min(150%, calc(100vw - 32px));
+  max-width: none;
+  margin-left: max(-25%, calc((100% - (100vw - 32px)) / 2));
   margin-top: 6px;
   padding-bottom: 24px;
   background: #175a5e;
@@ -352,6 +378,17 @@ tbody td {
   background: var(--panel-strong);
 }
 
+.group-row td {
+  padding: 12px 24px;
+  border-bottom: 1px solid var(--line);
+  font-weight: 700;
+}
+
+.group-row-ticker td {
+  background: linear-gradient(90deg, #1eaab4, #8ce5ea);
+  color: #000000;
+}
+
 tbody tr:hover {
   background: rgba(255, 250, 241, 0.68);
 }
@@ -382,7 +419,21 @@ a:hover {
   color: var(--muted);
 }
 
+@media (max-width: 1400px) {
+  .top-card,
+  .table-card {
+    width: 100%;
+    margin-left: 0;
+  }
+}
+
 @media (max-width: 900px) {
+  .top-card,
+  .table-card {
+    width: auto;
+    margin-left: 0;
+  }
+
   .page-shell {
     width: min(100% - 20px, 1240px);
     padding-top: 24px;
@@ -454,6 +505,11 @@ a:hover {
     padding: 12px 14px;
     align-items: start;
     word-break: break-word;
+  }
+
+  .group-row td {
+    display: block;
+    padding: 12px 14px;
   }
 
   tbody td::before {

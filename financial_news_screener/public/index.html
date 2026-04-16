@@ -82,7 +82,46 @@
             <h2>Latest Results</h2>
             <p id="summary">Fetching news sources...</p>
           </div>
-          <button id="refreshButton" type="button">Refresh Now</button>
+          <div class="table-actions">
+            <div class="grouping-controls">
+              <label class="grouping-control grouping-control-ticker">
+                <span>Focus Ticker</span>
+                <input
+                  id="tickerFilterInput"
+                  type="text"
+                  autocomplete="off"
+                  spellcheck="false"
+                  placeholder="e.g. NVDA"
+                />
+              </label>
+              <label class="grouping-control grouping-control-range">
+                <span>Time Range (Days)</span>
+                <input id="ageDaysInput" type="number" min="1" step="1" inputmode="numeric" />
+              </label>
+              <label class="grouping-control">
+                <span>Group By</span>
+                <select id="primaryGroupSelect">
+                  <option value="none" selected>None</option>
+                  <option value="ticker">Stock Ticker Symbol</option>
+                  <option value="keyword">Keyword</option>
+                  <option value="providerName">News Feed</option>
+                  <option value="source">News Source</option>
+                </select>
+              </label>
+              <label class="grouping-control">
+                <span>Then By</span>
+                <select id="secondaryGroupSelect">
+                  <option value="none" selected>None</option>
+                  <option value="ticker">Stock Ticker Symbol</option>
+                  <option value="keyword">Keyword</option>
+                  <option value="providerName">News Feed</option>
+                  <option value="source">News Source</option>
+                </select>
+              </label>
+            </div>
+            <button id="resetButton" type="button">Reset All</button>
+            <button id="refreshButton" type="button">Refresh Now</button>
+          </div>
         </div>
 
         <div id="message" class="message">Loading latest financial news...</div>

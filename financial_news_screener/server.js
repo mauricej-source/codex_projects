@@ -160,18 +160,27 @@ function getDefaultFeedIds() {
   return ["google-news", "nasdaq-markets"];
 }
 
-function buildKeywordSearchQuery(keyword, provider) {
+function normalizeAgeDays(value) {
+  const normalized = Number.parseInt(String(value || ""), 10);
+  if (Number.isNaN(normalized) || normalized < 1) {
+    return MAX_ITEM_AGE_DAYS;
+  }
+
+  return normalized;
+}
+
+function buildKeywordSearchQuery(keyword, provider, ageDays) {
   const domainClause = Array.isArray(provider.searchDomains) && provider.searchDomains.length
     ? ` (${provider.searchDomains.map((domain) => `site:${domain}`).join(" OR ")})`
     : "";
 
   return encodeURIComponent(
-    `"${keyword}" stock market finance when:${MAX_ITEM_AGE_DAYS}d${domainClause}`
+    `"${keyword}" stock market finance when:${ageDays}d${domainClause}`
   );
 }
 
-function buildFeedUrl(keyword, provider) {
-  return `https://news.google.com/rss/search?q=${buildKeywordSearchQuery(keyword, provider)}&hl=en-US&gl=US&ceid=US:en`;
+function buildFeedUrl(keyword, provider, ageDays) {
+  return `https://news.google.com/rss/search?q=${buildKeywordSearchQuery(keyword, provider, ageDays)}&hl=en-US&gl=US&ceid=US:en`;
 }
 
 async function parseFeedFromUrl(url) {
@@ -226,6 +235,8 @@ function parseTickers(text) {
     /\b[A-Z][A-Za-z0-9&.\- ]+\s+\(([A-Z]{1,5})\)/g,
     /\(([A-Z]{1,5})\)/g,
     /\$([A-Z]{1,5})\b/g,
+    /\b([A-Z]{1,5})\s+stock\b/g,
+    /\bshares\s+of\s+([A-Z]{1,5})\b/gi,
     /\bticker\s*[:\-]?\s*([A-Z]{1,5})\b/gi,
   ];
   const tickers = new Set();
@@ -254,10 +265,10 @@ function findMatchedKeyword(text, keywords) {
   return keywords.find((keyword) => normalizedText.includes(keyword.toLowerCase())) || null;
 }
 
-function isFreshEnough(timeReported) {
+function isFreshEnough(timeReported, ageDays) {
   const timestamp = new Date(timeReported).getTime();
   if (Number.isNaN(timestamp)) return false;
-  return timestamp >= Date.now() - MAX_ITEM_AGE_DAYS * 24 * 60 * 60 * 1000;
+  return timestamp >= Date.now() - ageDays * 24 * 60 * 60 * 1000;
 }
 
 function normalizeItem(item, keyword) {
@@ -455,8 +466,8 @@ function dedupeItems(items) {
   return output;
 }
 
-async function fetchKeywordFeed(provider, keyword) {
-  const feed = await parseFeedFromUrl(buildFeedUrl(keyword, provider));
+async function fetchKeywordFeed(provider, keyword, ageDays) {
+  const feed = await parseFeedFromUrl(buildFeedUrl(keyword, provider, ageDays));
   const items = Array.isArray(feed.items) ? feed.items : [];
   const normalizedItems = items.map((item) => normalizeProviderItem(item, keyword, provider));
   return Promise.all(normalizedItems.map(enrichTickersFromHeadline));
@@ -483,13 +494,13 @@ async function fetchProviderFeed(provider, keywords) {
   return Promise.all(normalizedItems.map(enrichTickersFromHeadline));
 }
 
-async function fetchNews() {
+async function fetchNews(ageDays = MAX_ITEM_AGE_DAYS) {
   const keywords = getKeywords();
   const feedIds = getDefaultFeedIds();
-  return fetchNewsForKeywords(keywords, feedIds);
+  return fetchNewsForKeywords(keywords, feedIds, ageDays);
 }
 
-async function fetchNewsForKeywords(keywords, feedIds) {
+async function fetchNewsForKeywords(keywords, feedIds, ageDays = MAX_ITEM_AGE_DAYS) {
   const providers = normalizeFeedIds(feedIds).map((feedId) => FEED_PROVIDER_MAP.get(feedId));
   const fetchJobs = [];
 
@@ -499,7 +510,7 @@ async function fetchNewsForKeywords(keywords, feedIds) {
         fetchJobs.push({
           provider,
           keyword,
-          run: () => fetchKeywordFeed(provider, keyword),
+          run: () => fetchKeywordFeed(provider, keyword, ageDays),
         });
       });
       return;
@@ -532,12 +543,13 @@ async function fetchNewsForKeywords(keywords, feedIds) {
   });
 
   const normalized = dedupeItems(rows)
-    .filter((item) => isFreshEnough(item.timeReported))
+    .filter((item) => isFreshEnough(item.timeReported, ageDays))
     .sort((a, b) => new Date(b.timeReported).getTime() - new Date(a.timeReported).getTime());
 
   return {
     fetchedAt: new Date().toISOString(),
     refreshIntervalMs: CACHE_TTL_MS,
+    ageDays,
     total: normalized.length,
     keywords,
     feedIds: providers.map((provider) => provider.id),
@@ -551,15 +563,17 @@ async function fetchNewsForKeywords(keywords, feedIds) {
   };
 }
 
-async function getCachedNews() {
+async function getCachedNews(ageDays = MAX_ITEM_AGE_DAYS) {
   const now = Date.now();
-  if (cache.payload && now - cache.fetchedAt < CACHE_TTL_MS) {
+  if (ageDays === MAX_ITEM_AGE_DAYS && cache.payload && now - cache.fetchedAt < CACHE_TTL_MS) {
     return cache.payload;
   }
 
-  const payload = await fetchNews();
-  cache.fetchedAt = now;
-  cache.payload = payload;
+  const payload = await fetchNews(ageDays);
+  if (ageDays === MAX_ITEM_AGE_DAYS) {
+    cache.fetchedAt = now;
+    cache.payload = payload;
+  }
   return payload;
 }
 
@@ -579,6 +593,10 @@ app.get("/api/feeds", (req, res) => {
 
 app.get("/api/news", async (req, res) => {
   try {
+    const requestedAgeDays =
+      typeof req.query.ageDays === "string" && req.query.ageDays.trim()
+        ? normalizeAgeDays(req.query.ageDays)
+        : MAX_ITEM_AGE_DAYS;
     const requestedKeywords =
       typeof req.query.keywords === "string" && req.query.keywords.trim()
         ? req.query.keywords
@@ -594,8 +612,12 @@ app.get("/api/news", async (req, res) => {
             .filter(Boolean)
         : null;
     const payload = requestedKeywords?.length
-      ? await fetchNewsForKeywords(requestedKeywords, requestedFeedIds || getDefaultFeedIds())
-      : await getCachedNews();
+      ? await fetchNewsForKeywords(
+          requestedKeywords,
+          requestedFeedIds || getDefaultFeedIds(),
+          requestedAgeDays
+        )
+      : await getCachedNews(requestedAgeDays);
     res.json(payload);
   } catch (error) {
     res.status(500).json({

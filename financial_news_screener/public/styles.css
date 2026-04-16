@@ -295,6 +295,58 @@ h1 {
   padding: 24px 24px 14px;
 }
 
+.table-actions {
+  display: flex;
+  align-items: end;
+  gap: 16px;
+}
+
+.grouping-controls {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.grouping-control {
+  display: grid;
+  gap: 6px;
+  min-width: 170px;
+  color: var(--accent);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.grouping-control select {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: rgba(255, 250, 241, 0.92);
+  color: var(--text);
+  padding: 10px 12px;
+  font: inherit;
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+.grouping-control input {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: rgba(255, 250, 241, 0.92);
+  color: var(--text);
+  padding: 10px 12px;
+  font: inherit;
+}
+
+.grouping-control-range {
+  min-width: 150px;
+}
+
+.grouping-control-ticker {
+  min-width: 170px;
+}
+
 button {
   border: 0;
   border-radius: 999px;
@@ -384,9 +436,14 @@ tbody td {
   font-weight: 700;
 }
 
-.group-row-ticker td {
+.group-row-primary td {
   background: linear-gradient(90deg, #1eaab4, #8ce5ea);
   color: #000000;
+}
+
+.group-row-secondary td {
+  background: rgba(140, 229, 234, 0.6);
+  color: #0b2d2f;
 }
 
 tbody tr:hover {
@@ -453,6 +510,21 @@ a:hover {
   .table-header {
     flex-direction: column;
     align-items: flex-start;
+  }
+
+  .table-actions {
+    width: 100%;
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .grouping-controls {
+    width: 100%;
+    justify-content: stretch;
+  }
+
+  .grouping-control {
+    min-width: 0;
   }
 
   .keyword-form {

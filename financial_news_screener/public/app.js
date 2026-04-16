@@ -8,8 +8,13 @@ const messageEl = document.getElementById("message");
 const keywordChipsEl = document.getElementById("keywordChips");
 const tableBodyEl = document.getElementById("newsTableBody");
 const refreshButtonEl = document.getElementById("refreshButton");
+const resetButtonEl = document.getElementById("resetButton");
 const keywordInputEl = document.getElementById("keywordInput");
 const applyKeywordsButtonEl = document.getElementById("applyKeywordsButton");
+const tickerFilterInputEl = document.getElementById("tickerFilterInput");
+const ageDaysInputEl = document.getElementById("ageDaysInput");
+const primaryGroupSelectEl = document.getElementById("primaryGroupSelect");
+const secondaryGroupSelectEl = document.getElementById("secondaryGroupSelect");
 const sortButtonEls = Array.from(document.querySelectorAll(".sort-button"));
 const feedSelectEl = document.getElementById("feedSelect");
 const feedSelectButtonEl = document.getElementById("feedSelectButton");
@@ -25,6 +30,13 @@ const DEFAULT_KEYWORDS =
 const FEED_SEPARATOR = "|";
 const KEYWORDS_STORAGE_KEY = "news-scanner.keywords";
 const TOP_PANEL_COLLAPSED_STORAGE_KEY = "news-scanner.top-panel-collapsed";
+const AGE_DAYS_STORAGE_KEY = "news-scanner.age-days";
+const TICKER_FILTER_STORAGE_KEY = "news-scanner.ticker-filter";
+const DEFAULT_AGE_DAYS = 14;
+const DEFAULT_GROUPING = {
+  primary: "none",
+  secondary: "none",
+};
 let currentKeywordString = DEFAULT_KEYWORDS;
 let currentItems = [];
 let allKeywords = DEFAULT_KEYWORDS.split("|");
@@ -36,6 +48,9 @@ let currentSort = {
   key: "timeReported",
   direction: "desc",
 };
+let currentGrouping = { ...DEFAULT_GROUPING };
+let currentAgeDays = DEFAULT_AGE_DAYS;
+let currentTickerFilter = "";
 
 function formatTimestamp(value) {
   const date = new Date(value);
@@ -169,25 +184,93 @@ function getSortedItems(items) {
   return currentSort.direction === "asc" ? sorted : sorted.reverse();
 }
 
-function groupItemsByTicker(items) {
-  const tickerGroups = new Map();
+function getGroupValue(item, groupKey) {
+  if (groupKey === "none") return "";
+  const value = item[groupKey];
+  return String(value || "N/A");
+}
+
+function getGroupLabel(groupKey) {
+  const labels = {
+    keyword: "Keyword",
+    providerName: "News Feed",
+    source: "News Source",
+    ticker: "Ticker",
+  };
+
+  return labels[groupKey] || groupKey;
+}
+
+function groupItems(items, groupKeys) {
+  if (!groupKeys.length) {
+    return getSortedItems(items);
+  }
+
+  const [currentGroupKey, ...remainingGroupKeys] = groupKeys;
+  const groupedItems = new Map();
 
   getSortedItems(items).forEach((item) => {
-    const primaryTicker = item.ticker || "N/A";
+    const groupValue = getGroupValue(item, currentGroupKey);
 
-    if (!tickerGroups.has(primaryTicker)) {
-      tickerGroups.set(primaryTicker, []);
+    if (!groupedItems.has(groupValue)) {
+      groupedItems.set(groupValue, []);
     }
 
-    tickerGroups.get(primaryTicker).push(item);
+    groupedItems.get(groupValue).push(item);
   });
 
-  return Array.from(tickerGroups.entries())
+  return Array.from(groupedItems.entries())
     .sort((left, right) => left[0].localeCompare(right[0], undefined, { sensitivity: "base" }))
-    .map(([ticker, groupedItems]) => ({
-      ticker,
-      items: groupedItems,
+    .map(([value, groupedGroupItems]) => ({
+      type: "group",
+      key: currentGroupKey,
+      value,
+      items: groupItems(groupedGroupItems, remainingGroupKeys),
     }));
+}
+
+function renderDataRow(item) {
+  return `
+    <tr>
+      <td data-label="Keyword"><span class="keyword-pill">${item.keyword}</span></td>
+      <td data-label="News Feed">${item.providerName || "N/A"}</td>
+      <td data-label="News Source">${item.source}</td>
+      <td data-label="News Title">${item.headline || "N/A"}</td>
+      <td data-label="Time Reported" class="mono">${formatTimestamp(item.timeReported)}</td>
+      <td data-label="Stock Ticker Symbol" class="mono ${(item.tickers || []).length ? "" : "muted-cell"}">${
+        (item.tickers || []).length ? item.tickers.join(", ") : "N/A"
+      }</td>
+      <td data-label="News Link"><a href="${item.articleUrl}" target="_blank" rel="noreferrer">Open Article</a></td>
+      <td data-label="Technical Chart">${
+        (item.finvizUrls || []).length
+          ? item.finvizUrls
+              .map((url, index) => {
+                const label = (item.tickers || [])[index] || `Chart ${index + 1}`;
+                return `<a href="${url}" target="_blank" rel="noreferrer">${label}</a>`;
+              })
+              .join(" | ")
+          : `<span class="muted-cell">N/A</span>`
+      }</td>
+    </tr>
+  `;
+}
+
+function renderGroupedRows(items, level = 0) {
+  return items
+    .map((item) => {
+      if (item?.type !== "group") {
+        return renderDataRow(item);
+      }
+
+      const levelClass = level === 0 ? "group-row-primary" : "group-row-secondary";
+      return `
+        <tr class="group-row ${levelClass}">
+          <td colspan="8">${getGroupLabel(item.key)}: ${item.value}</td>
+        </tr>
+        ${renderGroupedRows(item.items, level + 1)}
+      `;
+    })
+    .join("");
 }
 
 function renderSortState() {
@@ -199,49 +282,21 @@ function renderSortState() {
 }
 
 function renderRows(items) {
-  if (!items.length) {
+  const visibleItems = getVisibleItems(items);
+
+  if (!visibleItems.length) {
     tableBodyEl.innerHTML = "";
-    messageEl.textContent = "No recent stories matched the configured keywords.";
+    messageEl.textContent = currentTickerFilter
+      ? `No recent stories matched ticker filter "${currentTickerFilter}".`
+      : "No recent stories matched the configured keywords.";
     return;
   }
 
   messageEl.textContent = "";
-  tableBodyEl.innerHTML = groupItemsByTicker(items)
-    .map(
-      (tickerGroup) => `
-        <tr class="group-row group-row-ticker">
-          <td colspan="8">Ticker: ${tickerGroup.ticker}</td>
-        </tr>
-        ${tickerGroup.items
-          .map(
-            (item) => `
-              <tr>
-                <td data-label="Keyword"><span class="keyword-pill">${item.keyword}</span></td>
-                <td data-label="News Feed">${item.providerName || "N/A"}</td>
-                <td data-label="News Source">${item.source}</td>
-                <td data-label="News Title">${item.headline || "N/A"}</td>
-                <td data-label="Time Reported" class="mono">${formatTimestamp(item.timeReported)}</td>
-                <td data-label="Stock Ticker Symbol" class="mono ${(item.tickers || []).length ? "" : "muted-cell"}">${
-                  (item.tickers || []).length ? item.tickers.join(", ") : "N/A"
-                }</td>
-                <td data-label="News Link"><a href="${item.articleUrl}" target="_blank" rel="noreferrer">Open Article</a></td>
-                <td data-label="Technical Chart">${
-                  (item.finvizUrls || []).length
-                    ? item.finvizUrls
-                        .map((url, index) => {
-                          const label = (item.tickers || [])[index] || `Chart ${index + 1}`;
-                          return `<a href="${url}" target="_blank" rel="noreferrer">${label}</a>`;
-                        })
-                        .join(" | ")
-                    : `<span class="muted-cell">N/A</span>`
-                }</td>
-              </tr>
-            `
-          )
-          .join("")}
-      `
-    )
-    .join("");
+  const groupingKeys = [currentGrouping.primary, currentGrouping.secondary].filter(
+    (groupKey, index, array) => groupKey !== "none" && array.indexOf(groupKey) === index
+  );
+  tableBodyEl.innerHTML = renderGroupedRows(groupItems(visibleItems, groupingKeys));
 }
 
 function normalizeKeywordInput(value) {
@@ -268,6 +323,14 @@ function persistKeywords(keywordString) {
   }
 }
 
+function clearStoredValue(storageKey) {
+  try {
+    window.localStorage.removeItem(storageKey);
+  } catch {
+    // Ignore storage failures and keep the session state in memory.
+  }
+}
+
 function initializeKeywords() {
   const storedKeywords = readStoredKeywords();
   const initialKeywordString = storedKeywords || DEFAULT_KEYWORDS;
@@ -276,6 +339,79 @@ function initializeKeywords() {
   allKeywords = initialKeywordString.split("|").filter(Boolean);
   activeKeywords = [...allKeywords];
   keywordInputEl.value = initialKeywordString;
+}
+
+function normalizeAgeDays(value) {
+  const normalized = Number.parseInt(String(value || "").trim(), 10);
+  if (Number.isNaN(normalized) || normalized < 1) {
+    return DEFAULT_AGE_DAYS;
+  }
+
+  return normalized;
+}
+
+function readStoredAgeDays() {
+  try {
+    return normalizeAgeDays(window.localStorage.getItem(AGE_DAYS_STORAGE_KEY) || DEFAULT_AGE_DAYS);
+  } catch {
+    return DEFAULT_AGE_DAYS;
+  }
+}
+
+function persistAgeDays(ageDays) {
+  try {
+    window.localStorage.setItem(AGE_DAYS_STORAGE_KEY, String(ageDays));
+  } catch {
+    // Ignore storage failures and keep the session state in memory.
+  }
+}
+
+function initializeAgeDays() {
+  currentAgeDays = readStoredAgeDays();
+  ageDaysInputEl.value = String(currentAgeDays);
+}
+
+function normalizeTickerFilter(value) {
+  return String(value || "").trim().toUpperCase();
+}
+
+function readStoredTickerFilter() {
+  try {
+    return normalizeTickerFilter(window.localStorage.getItem(TICKER_FILTER_STORAGE_KEY) || "");
+  } catch {
+    return "";
+  }
+}
+
+function persistTickerFilter(value) {
+  try {
+    window.localStorage.setItem(TICKER_FILTER_STORAGE_KEY, value);
+  } catch {
+    // Ignore storage failures and keep the session state in memory.
+  }
+}
+
+function initializeTickerFilter() {
+  currentTickerFilter = readStoredTickerFilter();
+  tickerFilterInputEl.value = currentTickerFilter;
+}
+
+function getVisibleItems(items) {
+  if (!currentTickerFilter) {
+    return items;
+  }
+
+  return items.filter((item) => {
+    const primaryTicker = String(item.ticker || "").toUpperCase();
+    const allTickers = Array.isArray(item.tickers)
+      ? item.tickers.map((ticker) => String(ticker || "").toUpperCase())
+      : [];
+
+    return (
+      primaryTicker.includes(currentTickerFilter) ||
+      allTickers.some((ticker) => ticker.includes(currentTickerFilter))
+    );
+  });
 }
 
 function readStoredTopPanelState() {
@@ -304,6 +440,38 @@ function initializeTopPanel() {
   setTopPanelCollapsed(readStoredTopPanelState());
 }
 
+function syncGroupingControls() {
+  primaryGroupSelectEl.value = currentGrouping.primary;
+  secondaryGroupSelectEl.value = currentGrouping.secondary;
+}
+
+function updateGroupingFromControls() {
+  const primary = primaryGroupSelectEl.value;
+  let secondary = secondaryGroupSelectEl.value;
+
+  if (secondary === primary) {
+    secondary = "none";
+    secondaryGroupSelectEl.value = secondary;
+  }
+
+  currentGrouping = { primary, secondary };
+  renderRows(currentItems);
+}
+
+function applyAgeDaysFromInput() {
+  currentAgeDays = normalizeAgeDays(ageDaysInputEl.value);
+  ageDaysInputEl.value = String(currentAgeDays);
+  persistAgeDays(currentAgeDays);
+  loadNews();
+}
+
+function applyTickerFilterFromInput() {
+  currentTickerFilter = normalizeTickerFilter(tickerFilterInputEl.value);
+  tickerFilterInputEl.value = currentTickerFilter;
+  persistTickerFilter(currentTickerFilter);
+  renderRows(currentItems);
+}
+
 function applyKeywordsFromInput() {
   const normalized = normalizeKeywordInput(keywordInputEl.value || "");
   const nextKeywordString = normalized || DEFAULT_KEYWORDS;
@@ -313,6 +481,41 @@ function applyKeywordsFromInput() {
   allKeywords = nextKeywordString.split("|").filter(Boolean);
   activeKeywords = [...allKeywords];
   currentKeywordString = nextKeywordString;
+  loadNews();
+}
+
+function resetPageState() {
+  clearStoredValue(KEYWORDS_STORAGE_KEY);
+  clearStoredValue(AGE_DAYS_STORAGE_KEY);
+  clearStoredValue(TICKER_FILTER_STORAGE_KEY);
+  clearStoredValue(TOP_PANEL_COLLAPSED_STORAGE_KEY);
+
+  currentKeywordString = DEFAULT_KEYWORDS;
+  allKeywords = DEFAULT_KEYWORDS.split("|").filter(Boolean);
+  activeKeywords = [...allKeywords];
+  keywordInputEl.value = currentKeywordString;
+
+  currentAgeDays = DEFAULT_AGE_DAYS;
+  ageDaysInputEl.value = String(currentAgeDays);
+
+  currentTickerFilter = "";
+  tickerFilterInputEl.value = "";
+
+  currentGrouping = { ...DEFAULT_GROUPING };
+  syncGroupingControls();
+
+  currentSort = {
+    key: "timeReported",
+    direction: "desc",
+  };
+  renderSortState();
+
+  activeFeedIds = [...defaultFeedIds];
+  renderFeedOptions();
+  updateFeedButtonLabel();
+  closeFeedMenu();
+
+  setTopPanelCollapsed(false);
   loadNews();
 }
 
@@ -327,6 +530,7 @@ async function loadNews() {
     if (currentKeywordString) {
       query.set("keywords", currentKeywordString);
     }
+    query.set("ageDays", String(currentAgeDays));
     if (activeFeedIds.length) {
       query.set("feeds", activeFeedIds.join(FEED_SEPARATOR));
     }
@@ -346,9 +550,10 @@ async function loadNews() {
     statusEl.textContent = data.errors?.length ? "Partial" : "Live";
     lastRefreshEl.textContent = formatTimestamp(data.fetchedAt);
     matchCountEl.textContent = String(data.total || 0);
+    const activeAgeDays = Number(data.ageDays) || currentAgeDays;
     summaryEl.textContent = data.errors?.length
-      ? `Loaded ${data.total || 0} results from ${data.feedIds?.length || activeFeedIds.length} feeds. Some feed requests failed.`
-      : `Loaded ${data.total || 0} results sorted by the latest time reported.`;
+      ? `Loaded ${data.total || 0} results from ${data.feedIds?.length || activeFeedIds.length} feeds over the last ${activeAgeDays} day${activeAgeDays === 1 ? "" : "s"}. Some feed requests failed.`
+      : `Loaded ${data.total || 0} results from the last ${activeAgeDays} day${activeAgeDays === 1 ? "" : "s"}, sorted by the latest time reported.`;
   } catch (error) {
     statusEl.textContent = "Error";
     summaryEl.textContent = "Unable to refresh at the moment.";
@@ -361,6 +566,7 @@ async function loadNews() {
 }
 
 refreshButtonEl.addEventListener("click", loadNews);
+resetButtonEl.addEventListener("click", resetPageState);
 applyKeywordsButtonEl.addEventListener("click", applyKeywordsFromInput);
 keywordInputEl.addEventListener("keydown", (event) => {
   if (event.key !== "Enter") return;
@@ -407,6 +613,22 @@ clearFeedsButtonEl.addEventListener("click", () => {
   loadNews();
 });
 
+primaryGroupSelectEl.addEventListener("change", updateGroupingFromControls);
+secondaryGroupSelectEl.addEventListener("change", updateGroupingFromControls);
+ageDaysInputEl.addEventListener("change", applyAgeDaysFromInput);
+ageDaysInputEl.addEventListener("keydown", (event) => {
+  if (event.key !== "Enter") return;
+  event.preventDefault();
+  applyAgeDaysFromInput();
+});
+tickerFilterInputEl.addEventListener("change", applyTickerFilterFromInput);
+tickerFilterInputEl.addEventListener("input", applyTickerFilterFromInput);
+tickerFilterInputEl.addEventListener("keydown", (event) => {
+  if (event.key !== "Enter") return;
+  event.preventDefault();
+  applyTickerFilterFromInput();
+});
+
 toggleTopPanelButtonEl.addEventListener("click", () => {
   const isCollapsed = !topCardEl.classList.contains("is-collapsed");
   setTopPanelCollapsed(isCollapsed);
@@ -420,7 +642,10 @@ document.addEventListener("click", (event) => {
 });
 
 initializeKeywords();
+initializeAgeDays();
+initializeTickerFilter();
 initializeTopPanel();
+syncGroupingControls();
 renderSortState();
 loadFeeds()
   .then(loadNews)

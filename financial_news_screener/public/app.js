@@ -3,11 +3,17 @@ const POLL_INTERVAL_MS = 15 * 60 * 1000;
 const statusEl = document.getElementById("status");
 const lastRefreshEl = document.getElementById("lastRefresh");
 const matchCountEl = document.getElementById("matchCount");
-const summaryEl = document.getElementById("summary");
 const messageEl = document.getElementById("message");
+const loadingOverlayEl = document.getElementById("loadingOverlay");
 const keywordChipsEl = document.getElementById("keywordChips");
 const tableBodyEl = document.getElementById("newsTableBody");
+const researchCardEl = document.getElementById("researchCard");
+const researchTableBodyEl = document.getElementById("researchTableBody");
+const mainTableEl = tableBodyEl.closest("table");
+const researchTableEl = researchTableBodyEl.closest("table");
+const resultsCardEl = document.querySelector(".table-card");
 const refreshButtonEl = document.getElementById("refreshButton");
+const loadPricesButtonEl = document.getElementById("loadPricesButton");
 const resetButtonEl = document.getElementById("resetButton");
 const keywordInputEl = document.getElementById("keywordInput");
 const applyKeywordsButtonEl = document.getElementById("applyKeywordsButton");
@@ -15,7 +21,8 @@ const tickerFilterInputEl = document.getElementById("tickerFilterInput");
 const ageDaysInputEl = document.getElementById("ageDaysInput");
 const primaryGroupSelectEl = document.getElementById("primaryGroupSelect");
 const secondaryGroupSelectEl = document.getElementById("secondaryGroupSelect");
-const sortButtonEls = Array.from(document.querySelectorAll(".sort-button"));
+const minPriceInputEl = document.getElementById("minPriceInput");
+const maxPriceInputEl = document.getElementById("maxPriceInput");
 const feedSelectEl = document.getElementById("feedSelect");
 const feedSelectButtonEl = document.getElementById("feedSelectButton");
 const feedSelectMenuEl = document.getElementById("feedSelectMenu");
@@ -23,6 +30,8 @@ const feedOptionsEl = document.getElementById("feedOptions");
 const selectAllFeedsButtonEl = document.getElementById("selectAllFeedsButton");
 const clearFeedsButtonEl = document.getElementById("clearFeedsButton");
 const toggleTopPanelButtonEl = document.getElementById("toggleTopPanelButton");
+const toggleResultsPanelButtonEl = document.getElementById("toggleResultsPanelButton");
+const toggleResearchPanelButtonEl = document.getElementById("toggleResearchPanelButton");
 const topCardEl = document.querySelector(".top-card");
 
 const DEFAULT_KEYWORDS =
@@ -30,9 +39,16 @@ const DEFAULT_KEYWORDS =
 const FEED_SEPARATOR = "|";
 const KEYWORDS_STORAGE_KEY = "news-scanner.keywords";
 const TOP_PANEL_COLLAPSED_STORAGE_KEY = "news-scanner.top-panel-collapsed";
+const RESULTS_PANEL_COLLAPSED_STORAGE_KEY = "news-scanner.results-panel-collapsed";
+const RESEARCH_PANEL_COLLAPSED_STORAGE_KEY = "news-scanner.research-panel-collapsed";
 const AGE_DAYS_STORAGE_KEY = "news-scanner.age-days";
 const TICKER_FILTER_STORAGE_KEY = "news-scanner.ticker-filter";
+const PRICE_RANGE_STORAGE_KEY = "news-scanner.price-range";
 const DEFAULT_AGE_DAYS = 14;
+const DEFAULT_PRICE_RANGE = {
+  min: 0,
+  max: 10,
+};
 const DEFAULT_GROUPING = {
   primary: "none",
   secondary: "none",
@@ -44,13 +60,24 @@ let activeKeywords = [...allKeywords];
 let availableFeeds = [];
 let defaultFeedIds = [];
 let activeFeedIds = [];
-let currentSort = {
+const DEFAULT_SORT = {
   key: "timeReported",
   direction: "desc",
+};
+let currentSort = {
+  main: { ...DEFAULT_SORT },
+  research: { ...DEFAULT_SORT },
 };
 let currentGrouping = { ...DEFAULT_GROUPING };
 let currentAgeDays = DEFAULT_AGE_DAYS;
 let currentTickerFilter = "";
+let currentPriceRange = { ...DEFAULT_PRICE_RANGE };
+let currentIncludePrices = false;
+let pendingLoadCount = 0;
+
+function getPanelToggleSymbol(isCollapsed) {
+  return isCollapsed ? "˅" : "˄";
+}
 
 function formatTimestamp(value) {
   const date = new Date(value);
@@ -59,6 +86,22 @@ function formatTimestamp(value) {
     dateStyle: "medium",
     timeStyle: "short",
   }).format(date);
+}
+
+function beginPageLoading() {
+  pendingLoadCount += 1;
+  loadingOverlayEl.hidden = false;
+}
+
+function updateLoadPricesButton() {
+  loadPricesButtonEl.textContent = "Get Prices";
+}
+
+function endPageLoading() {
+  pendingLoadCount = Math.max(0, pendingLoadCount - 1);
+  if (!pendingLoadCount) {
+    loadingOverlayEl.hidden = true;
+  }
 }
 
 function renderKeywords(keywords) {
@@ -92,8 +135,8 @@ function renderKeywords(keywords) {
         activeKeywords = [...allKeywords];
       }
 
-      currentKeywordString = activeKeywords.join("|");
-      loadNews();
+      renderKeywords(allKeywords);
+      renderRows(currentItems);
     });
   });
 }
@@ -154,8 +197,10 @@ function openFeedMenu() {
 }
 
 async function loadFeeds() {
+  beginPageLoading();
   const response = await fetch("/api/feeds", { cache: "no-store" });
   if (!response.ok) {
+    endPageLoading();
     throw new Error(`Feed request failed with status ${response.status}`);
   }
 
@@ -167,6 +212,7 @@ async function loadFeeds() {
   activeFeedIds = [...defaultFeedIds];
   renderFeedOptions();
   updateFeedButtonLabel();
+  endPageLoading();
 }
 
 function compareValues(left, right, key) {
@@ -174,14 +220,22 @@ function compareValues(left, right, key) {
     return new Date(left[key]).getTime() - new Date(right[key]).getTime();
   }
 
+  if (key === "stockPrice") {
+    const leftPrice =
+      typeof left.stockPrice === "number" ? left.stockPrice : Number.NEGATIVE_INFINITY;
+    const rightPrice =
+      typeof right.stockPrice === "number" ? right.stockPrice : Number.NEGATIVE_INFINITY;
+    return leftPrice - rightPrice;
+  }
+
   return String(left[key] || "").localeCompare(String(right[key] || ""), undefined, {
     sensitivity: "base",
   });
 }
 
-function getSortedItems(items) {
-  const sorted = [...items].sort((left, right) => compareValues(left, right, currentSort.key));
-  return currentSort.direction === "asc" ? sorted : sorted.reverse();
+function getSortedItems(items, sortState) {
+  const sorted = [...items].sort((left, right) => compareValues(left, right, sortState.key));
+  return sortState.direction === "asc" ? sorted : sorted.reverse();
 }
 
 function getGroupValue(item, groupKey) {
@@ -201,15 +255,15 @@ function getGroupLabel(groupKey) {
   return labels[groupKey] || groupKey;
 }
 
-function groupItems(items, groupKeys) {
+function groupItems(items, groupKeys, sortState) {
   if (!groupKeys.length) {
-    return getSortedItems(items);
+    return getSortedItems(items, sortState);
   }
 
   const [currentGroupKey, ...remainingGroupKeys] = groupKeys;
   const groupedItems = new Map();
 
-  getSortedItems(items).forEach((item) => {
+  getSortedItems(items, sortState).forEach((item) => {
     const groupValue = getGroupValue(item, currentGroupKey);
 
     if (!groupedItems.has(groupValue)) {
@@ -225,11 +279,20 @@ function groupItems(items, groupKeys) {
       type: "group",
       key: currentGroupKey,
       value,
-      items: groupItems(groupedGroupItems, remainingGroupKeys),
+      items: groupItems(groupedGroupItems, remainingGroupKeys, sortState),
     }));
 }
 
 function renderDataRow(item) {
+  const stockPriceDisplay =
+    typeof item.stockPrice === "number"
+      ? new Intl.NumberFormat(undefined, {
+          style: "currency",
+          currency: "USD",
+          maximumFractionDigits: 2,
+        }).format(item.stockPrice)
+      : "N/A";
+
   return `
     <tr>
       <td data-label="Keyword"><span class="keyword-pill">${item.keyword}</span></td>
@@ -240,6 +303,7 @@ function renderDataRow(item) {
       <td data-label="Stock Ticker Symbol" class="mono ${(item.tickers || []).length ? "" : "muted-cell"}">${
         (item.tickers || []).length ? item.tickers.join(", ") : "N/A"
       }</td>
+      <td data-label="Stock Price" class="mono ${stockPriceDisplay === "N/A" ? "muted-cell" : ""}">${stockPriceDisplay}</td>
       <td data-label="News Link"><a href="${item.articleUrl}" target="_blank" rel="noreferrer">Open Article</a></td>
       <td data-label="Technical Chart">${
         (item.finvizUrls || []).length
@@ -265,7 +329,7 @@ function renderGroupedRows(items, level = 0) {
       const levelClass = level === 0 ? "group-row-primary" : "group-row-secondary";
       return `
         <tr class="group-row ${levelClass}">
-          <td colspan="8">${getGroupLabel(item.key)}: ${item.value}</td>
+          <td colspan="9">${getGroupLabel(item.key)}: ${item.value}</td>
         </tr>
         ${renderGroupedRows(item.items, level + 1)}
       `;
@@ -273,30 +337,57 @@ function renderGroupedRows(items, level = 0) {
     .join("");
 }
 
-function renderSortState() {
-  sortButtonEls.forEach((button) => {
+function renderSortState(tableType) {
+  const sortState = currentSort[tableType];
+  const tableEl = tableType === "research" ? researchTableEl : mainTableEl;
+  Array.from(tableEl.querySelectorAll(".sort-button")).forEach((button) => {
     button.classList.remove("is-active", "is-active-desc");
-    if (button.dataset.sortKey !== currentSort.key) return;
-    button.classList.add(currentSort.direction === "asc" ? "is-active" : "is-active-desc");
+    if (button.dataset.sortKey !== sortState.key) return;
+    button.classList.add(sortState.direction === "asc" ? "is-active" : "is-active-desc");
   });
 }
 
 function renderRows(items) {
-  const visibleItems = getVisibleItems(items);
+  const tickerVisibleItems = getVisibleItems(items);
+  const resolvedItems = tickerVisibleItems.filter((item) => (item.tickers || []).length);
+  const researchItems = tickerVisibleItems.filter((item) => !(item.tickers || []).length);
+  const visibleItems = getPriceFilteredItems(getKeywordFilteredItems(resolvedItems));
 
   if (!visibleItems.length) {
     tableBodyEl.innerHTML = "";
-    messageEl.textContent = currentTickerFilter
-      ? `No recent stories matched ticker filter "${currentTickerFilter}".`
-      : "No recent stories matched the configured keywords.";
+    if (researchItems.length) {
+      messageEl.textContent = "No resolved tickers matched the active filters. Unresolved matches are listed below.";
+    } else if (activeKeywords.length !== allKeywords.length) {
+      messageEl.textContent = "No resolved tickers matched the active keyword chip filters.";
+    } else if (!currentIncludePrices) {
+      messageEl.textContent = "No resolved tickers are available yet for the current news selection.";
+    } else if (currentTickerFilter) {
+      messageEl.textContent = `No recent stories matched ticker filter "${currentTickerFilter}".`;
+    } else if (currentPriceRange.min !== null || currentPriceRange.max !== null) {
+      const minLabel =
+        currentPriceRange.min !== null ? `$${currentPriceRange.min.toFixed(2)}` : "$0.00";
+      const maxLabel =
+        currentPriceRange.max !== null ? `$${currentPriceRange.max.toFixed(2)}` : "up";
+      messageEl.textContent = `No recent stories matched price range ${minLabel}-${maxLabel}.`;
+    } else {
+      messageEl.textContent = "No recent stories matched the configured keywords.";
+    }
+  } else {
+    messageEl.textContent = "";
+    const groupingKeys = [currentGrouping.primary, currentGrouping.secondary].filter(
+      (groupKey, index, array) => groupKey !== "none" && array.indexOf(groupKey) === index
+    );
+    tableBodyEl.innerHTML = renderGroupedRows(groupItems(visibleItems, groupingKeys, currentSort.main));
+  }
+
+  if (!researchItems.length) {
+    researchCardEl.hidden = true;
+    researchTableBodyEl.innerHTML = "";
     return;
   }
 
-  messageEl.textContent = "";
-  const groupingKeys = [currentGrouping.primary, currentGrouping.secondary].filter(
-    (groupKey, index, array) => groupKey !== "none" && array.indexOf(groupKey) === index
-  );
-  tableBodyEl.innerHTML = renderGroupedRows(groupItems(visibleItems, groupingKeys));
+  researchCardEl.hidden = false;
+  researchTableBodyEl.innerHTML = renderGroupedRows(getResearchGroupedItems(researchItems));
 }
 
 function normalizeKeywordInput(value) {
@@ -396,48 +487,194 @@ function initializeTickerFilter() {
   tickerFilterInputEl.value = currentTickerFilter;
 }
 
-function getVisibleItems(items) {
-  if (!currentTickerFilter) {
-    return items;
+function normalizePriceBound(value) {
+  const normalized = Number.parseFloat(String(value || "").trim());
+  if (Number.isNaN(normalized) || normalized < 0) {
+    return null;
   }
 
+  return normalized;
+}
+
+function formatPriceBound(value) {
+  return typeof value === "number" ? String(value) : "";
+}
+
+function normalizePriceRange(minValue, maxValue) {
+  let min = normalizePriceBound(minValue);
+  let max = normalizePriceBound(maxValue);
+
+  if (typeof min === "number" && typeof max === "number" && min > max) {
+    [min, max] = [max, min];
+  }
+
+  return { min, max };
+}
+
+function readStoredPriceRange() {
+  try {
+    const parsed = JSON.parse(window.localStorage.getItem(PRICE_RANGE_STORAGE_KEY) || "null");
+    if (!parsed || typeof parsed !== "object") {
+      return { ...DEFAULT_PRICE_RANGE };
+    }
+
+    return normalizePriceRange(parsed.min, parsed.max);
+  } catch {
+    return { ...DEFAULT_PRICE_RANGE };
+  }
+}
+
+function persistPriceRange(priceRange) {
+  try {
+    window.localStorage.setItem(PRICE_RANGE_STORAGE_KEY, JSON.stringify(priceRange));
+  } catch {
+    // Ignore storage failures and keep the session state in memory.
+  }
+}
+
+function syncPriceRangeInputs() {
+  minPriceInputEl.value = formatPriceBound(currentPriceRange.min);
+  maxPriceInputEl.value = formatPriceBound(currentPriceRange.max);
+}
+
+function initializePriceRange() {
+  currentPriceRange = readStoredPriceRange();
+  syncPriceRangeInputs();
+}
+
+function getVisibleItems(items) {
   return items.filter((item) => {
     const primaryTicker = String(item.ticker || "").toUpperCase();
     const allTickers = Array.isArray(item.tickers)
       ? item.tickers.map((ticker) => String(ticker || "").toUpperCase())
       : [];
 
-    return (
+    const matchesTicker =
+      !currentTickerFilter ||
       primaryTicker.includes(currentTickerFilter) ||
-      allTickers.some((ticker) => ticker.includes(currentTickerFilter))
-    );
+      allTickers.some((ticker) => ticker.includes(currentTickerFilter));
+
+    if (!matchesTicker) {
+      return false;
+    }
+
+    return true;
   });
 }
 
+function getPriceFilteredItems(items) {
+  return items.filter((item) => {
+    if (!currentIncludePrices) {
+      return true;
+    }
+
+    if (currentPriceRange.min === null && currentPriceRange.max === null) {
+      return true;
+    }
+
+    if (typeof item.stockPrice !== "number") {
+      return false;
+    }
+
+    if (typeof currentPriceRange.min === "number" && item.stockPrice < currentPriceRange.min) {
+      return false;
+    }
+
+    if (typeof currentPriceRange.max === "number" && item.stockPrice > currentPriceRange.max) {
+      return false;
+    }
+
+    return true;
+  });
+}
+
+function getKeywordFilteredItems(items) {
+  if (activeKeywords.length === allKeywords.length) {
+    return items;
+  }
+
+  const activeKeywordSet = new Set(activeKeywords.map((keyword) => keyword.toLowerCase()));
+  return items.filter((item) => activeKeywordSet.has(String(item.keyword || "").toLowerCase()));
+}
+
+function getResearchGroupedItems(items) {
+  const groupingKeys = [currentGrouping.primary, currentGrouping.secondary].filter(
+    (groupKey, index, array) =>
+      groupKey !== "none" && groupKey !== "ticker" && array.indexOf(groupKey) === index
+  );
+
+  return groupItems(items, groupingKeys, currentSort.research);
+}
+
 function readStoredTopPanelState() {
+  return readStoredCollapsedState(TOP_PANEL_COLLAPSED_STORAGE_KEY);
+}
+
+function readStoredCollapsedState(storageKey) {
   try {
-    return window.localStorage.getItem(TOP_PANEL_COLLAPSED_STORAGE_KEY) === "true";
+    return window.localStorage.getItem(storageKey) === "true";
   } catch {
     return false;
   }
 }
 
-function persistTopPanelState(isCollapsed) {
+function persistCollapsedState(storageKey, isCollapsed) {
   try {
-    window.localStorage.setItem(TOP_PANEL_COLLAPSED_STORAGE_KEY, String(isCollapsed));
+    window.localStorage.setItem(storageKey, String(isCollapsed));
   } catch {
     // Ignore storage failures and keep the session state in memory.
   }
 }
 
+function persistTopPanelState(isCollapsed) {
+  persistCollapsedState(TOP_PANEL_COLLAPSED_STORAGE_KEY, isCollapsed);
+}
+
 function setTopPanelCollapsed(isCollapsed) {
   topCardEl.classList.toggle("is-collapsed", isCollapsed);
-  toggleTopPanelButtonEl.textContent = isCollapsed ? "Expand Top Panel" : "Collapse Top Panel";
+  toggleTopPanelButtonEl.textContent = getPanelToggleSymbol(isCollapsed);
+  toggleTopPanelButtonEl.setAttribute(
+    "aria-label",
+    isCollapsed ? "Expand Top Panel" : "Collapse Top Panel"
+  );
+  toggleTopPanelButtonEl.setAttribute(
+    "title",
+    isCollapsed ? "Expand Top Panel" : "Collapse Top Panel"
+  );
   toggleTopPanelButtonEl.setAttribute("aria-expanded", String(!isCollapsed));
 }
 
 function initializeTopPanel() {
   setTopPanelCollapsed(readStoredTopPanelState());
+}
+
+function setTablePanelCollapsed(cardEl, buttonEl, isCollapsed, labels) {
+  cardEl.classList.toggle("is-collapsed", isCollapsed);
+  buttonEl.textContent = getPanelToggleSymbol(isCollapsed);
+  buttonEl.setAttribute("aria-label", isCollapsed ? labels.expand : labels.collapse);
+  buttonEl.setAttribute("title", isCollapsed ? labels.expand : labels.collapse);
+  buttonEl.setAttribute("aria-expanded", String(!isCollapsed));
+}
+
+function initializeTablePanels() {
+  setTablePanelCollapsed(
+    resultsCardEl,
+    toggleResultsPanelButtonEl,
+    readStoredCollapsedState(RESULTS_PANEL_COLLAPSED_STORAGE_KEY),
+    {
+      collapse: "Collapse Latest Results",
+      expand: "Expand Latest Results",
+    }
+  );
+  setTablePanelCollapsed(
+    researchCardEl,
+    toggleResearchPanelButtonEl,
+    readStoredCollapsedState(RESEARCH_PANEL_COLLAPSED_STORAGE_KEY),
+    {
+      collapse: "Collapse Requires Research",
+      expand: "Expand Requires Research",
+    }
+  );
 }
 
 function syncGroupingControls() {
@@ -472,6 +709,14 @@ function applyTickerFilterFromInput() {
   renderRows(currentItems);
 }
 
+function applyPriceRangeFromInputs() {
+  currentPriceRange = normalizePriceRange(minPriceInputEl.value, maxPriceInputEl.value);
+  syncPriceRangeInputs();
+  persistPriceRange(currentPriceRange);
+
+  renderRows(currentItems);
+}
+
 function applyKeywordsFromInput() {
   const normalized = normalizeKeywordInput(keywordInputEl.value || "");
   const nextKeywordString = normalized || DEFAULT_KEYWORDS;
@@ -488,7 +733,10 @@ function resetPageState() {
   clearStoredValue(KEYWORDS_STORAGE_KEY);
   clearStoredValue(AGE_DAYS_STORAGE_KEY);
   clearStoredValue(TICKER_FILTER_STORAGE_KEY);
+  clearStoredValue(PRICE_RANGE_STORAGE_KEY);
   clearStoredValue(TOP_PANEL_COLLAPSED_STORAGE_KEY);
+  clearStoredValue(RESULTS_PANEL_COLLAPSED_STORAGE_KEY);
+  clearStoredValue(RESEARCH_PANEL_COLLAPSED_STORAGE_KEY);
 
   currentKeywordString = DEFAULT_KEYWORDS;
   allKeywords = DEFAULT_KEYWORDS.split("|").filter(Boolean);
@@ -501,14 +749,21 @@ function resetPageState() {
   currentTickerFilter = "";
   tickerFilterInputEl.value = "";
 
+  currentPriceRange = { ...DEFAULT_PRICE_RANGE };
+  syncPriceRangeInputs();
+
+  currentIncludePrices = false;
+  updateLoadPricesButton();
+
   currentGrouping = { ...DEFAULT_GROUPING };
   syncGroupingControls();
 
   currentSort = {
-    key: "timeReported",
-    direction: "desc",
+    main: { ...DEFAULT_SORT },
+    research: { ...DEFAULT_SORT },
   };
-  renderSortState();
+  renderSortState("main");
+  renderSortState("research");
 
   activeFeedIds = [...defaultFeedIds];
   renderFeedOptions();
@@ -516,13 +771,24 @@ function resetPageState() {
   closeFeedMenu();
 
   setTopPanelCollapsed(false);
+  setTablePanelCollapsed(resultsCardEl, toggleResultsPanelButtonEl, false, {
+    collapse: "Collapse Latest Results",
+    expand: "Expand Latest Results",
+  });
+  setTablePanelCollapsed(researchCardEl, toggleResearchPanelButtonEl, false, {
+    collapse: "Collapse Requires Research",
+    expand: "Expand Requires Research",
+  });
   loadNews();
 }
 
 async function loadNews() {
+  beginPageLoading();
   statusEl.textContent = "Refreshing";
   messageEl.textContent = "Loading latest financial news...";
   refreshButtonEl.disabled = true;
+  loadPricesButtonEl.disabled = true;
+  resetButtonEl.disabled = true;
   applyKeywordsButtonEl.disabled = true;
 
   try {
@@ -531,6 +797,7 @@ async function loadNews() {
       query.set("keywords", currentKeywordString);
     }
     query.set("ageDays", String(currentAgeDays));
+    query.set("includePrices", currentIncludePrices ? "true" : "false");
     if (activeFeedIds.length) {
       query.set("feeds", activeFeedIds.join(FEED_SEPARATOR));
     }
@@ -542,30 +809,39 @@ async function loadNews() {
 
     const data = await response.json();
     renderKeywords(allKeywords);
-    currentKeywordString = activeKeywords.join("|") || DEFAULT_KEYWORDS;
+    currentKeywordString = allKeywords.join("|") || DEFAULT_KEYWORDS;
     currentItems = data.items || [];
-    renderSortState();
+    const visibleCount = getPriceFilteredItems(
+      getKeywordFilteredItems(getVisibleItems(currentItems).filter((item) => (item.tickers || []).length))
+    ).length;
+    renderSortState("main");
+    renderSortState("research");
     renderRows(currentItems);
 
     statusEl.textContent = data.errors?.length ? "Partial" : "Live";
     lastRefreshEl.textContent = formatTimestamp(data.fetchedAt);
-    matchCountEl.textContent = String(data.total || 0);
-    const activeAgeDays = Number(data.ageDays) || currentAgeDays;
-    summaryEl.textContent = data.errors?.length
-      ? `Loaded ${data.total || 0} results from ${data.feedIds?.length || activeFeedIds.length} feeds over the last ${activeAgeDays} day${activeAgeDays === 1 ? "" : "s"}. Some feed requests failed.`
-      : `Loaded ${data.total || 0} results from the last ${activeAgeDays} day${activeAgeDays === 1 ? "" : "s"}, sorted by the latest time reported.`;
+    matchCountEl.textContent = String(visibleCount);
   } catch (error) {
     statusEl.textContent = "Error";
-    summaryEl.textContent = "Unable to refresh at the moment.";
     messageEl.textContent = error instanceof Error ? error.message : String(error);
     tableBodyEl.innerHTML = "";
+    researchCardEl.hidden = true;
+    researchTableBodyEl.innerHTML = "";
   } finally {
     refreshButtonEl.disabled = false;
+    loadPricesButtonEl.disabled = false;
+    resetButtonEl.disabled = false;
     applyKeywordsButtonEl.disabled = false;
+    endPageLoading();
   }
 }
 
 refreshButtonEl.addEventListener("click", loadNews);
+loadPricesButtonEl.addEventListener("click", () => {
+  currentIncludePrices = true;
+  updateLoadPricesButton();
+  loadNews();
+});
 resetButtonEl.addEventListener("click", resetPageState);
 applyKeywordsButtonEl.addEventListener("click", applyKeywordsFromInput);
 keywordInputEl.addEventListener("keydown", (event) => {
@@ -573,19 +849,21 @@ keywordInputEl.addEventListener("keydown", (event) => {
   event.preventDefault();
   applyKeywordsFromInput();
 });
-sortButtonEls.forEach((button) => {
+Array.from(document.querySelectorAll(".sort-button")).forEach((button) => {
   button.addEventListener("click", () => {
     const nextKey = button.dataset.sortKey;
     if (!nextKey) return;
+    const tableType = button.closest("table") === researchTableEl ? "research" : "main";
+    const sortState = currentSort[tableType];
 
-    if (currentSort.key === nextKey) {
-      currentSort.direction = currentSort.direction === "asc" ? "desc" : "asc";
+    if (sortState.key === nextKey) {
+      sortState.direction = sortState.direction === "asc" ? "desc" : "asc";
     } else {
-      currentSort.key = nextKey;
-      currentSort.direction = "asc";
+      sortState.key = nextKey;
+      sortState.direction = "asc";
     }
 
-    renderSortState();
+    renderSortState(tableType);
     renderRows(currentItems);
   });
 });
@@ -628,11 +906,39 @@ tickerFilterInputEl.addEventListener("keydown", (event) => {
   event.preventDefault();
   applyTickerFilterFromInput();
 });
+minPriceInputEl.addEventListener("change", applyPriceRangeFromInputs);
+maxPriceInputEl.addEventListener("change", applyPriceRangeFromInputs);
+minPriceInputEl.addEventListener("keydown", (event) => {
+  if (event.key !== "Enter") return;
+  event.preventDefault();
+  applyPriceRangeFromInputs();
+});
+maxPriceInputEl.addEventListener("keydown", (event) => {
+  if (event.key !== "Enter") return;
+  event.preventDefault();
+  applyPriceRangeFromInputs();
+});
 
 toggleTopPanelButtonEl.addEventListener("click", () => {
   const isCollapsed = !topCardEl.classList.contains("is-collapsed");
   setTopPanelCollapsed(isCollapsed);
   persistTopPanelState(isCollapsed);
+});
+toggleResultsPanelButtonEl.addEventListener("click", () => {
+  const isCollapsed = !resultsCardEl.classList.contains("is-collapsed");
+  setTablePanelCollapsed(resultsCardEl, toggleResultsPanelButtonEl, isCollapsed, {
+    collapse: "Collapse Latest Results",
+    expand: "Expand Latest Results",
+  });
+  persistCollapsedState(RESULTS_PANEL_COLLAPSED_STORAGE_KEY, isCollapsed);
+});
+toggleResearchPanelButtonEl.addEventListener("click", () => {
+  const isCollapsed = !researchCardEl.classList.contains("is-collapsed");
+  setTablePanelCollapsed(researchCardEl, toggleResearchPanelButtonEl, isCollapsed, {
+    collapse: "Collapse Requires Research",
+    expand: "Expand Requires Research",
+  });
+  persistCollapsedState(RESEARCH_PANEL_COLLAPSED_STORAGE_KEY, isCollapsed);
 });
 
 document.addEventListener("click", (event) => {
@@ -644,14 +950,17 @@ document.addEventListener("click", (event) => {
 initializeKeywords();
 initializeAgeDays();
 initializeTickerFilter();
+initializePriceRange();
 initializeTopPanel();
+initializeTablePanels();
+updateLoadPricesButton();
 syncGroupingControls();
-renderSortState();
+renderSortState("main");
+renderSortState("research");
 loadFeeds()
   .then(loadNews)
   .catch((error) => {
     statusEl.textContent = "Error";
-    summaryEl.textContent = "Unable to load feed configuration.";
     messageEl.textContent = error instanceof Error ? error.message : String(error);
   });
 setInterval(loadNews, POLL_INTERVAL_MS);

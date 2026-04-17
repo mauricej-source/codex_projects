@@ -47,11 +47,10 @@ const TICKER_STOPWORDS = new Set([
   "VALUE",
 ]);
 
-const cache = {
-  fetchedAt: 0,
-  payload: null,
-};
+const requestCache = new Map();
 const companyLookupCache = new Map();
+const quoteLookupCache = new Map();
+const articleContentCache = new Map();
 const COMPANY_SYMBOL_ALIASES = new Map([
   ["galaxy", "GLXY"],
   ["ncino", "NCNO"],
@@ -160,6 +159,16 @@ function getDefaultFeedIds() {
   return ["google-news", "nasdaq-markets"];
 }
 
+function normalizeKeywordsForCache(keywords) {
+  return Array.from(
+    new Set(
+      (Array.isArray(keywords) ? keywords : [])
+        .map((keyword) => String(keyword || "").trim())
+        .filter(Boolean)
+    )
+  );
+}
+
 function normalizeAgeDays(value) {
   const normalized = Number.parseInt(String(value || ""), 10);
   if (Number.isNaN(normalized) || normalized < 1) {
@@ -197,6 +206,20 @@ function normalizeFeedIds(feedIds) {
   const requested = Array.isArray(feedIds) ? feedIds : [];
   const normalized = requested.filter((feedId) => FEED_PROVIDER_MAP.has(feedId));
   return normalized.length ? normalized : getDefaultFeedIds();
+}
+
+function buildNewsCacheKey(keywords, feedIds, ageDays, includePrices) {
+  const normalizedKeywords = normalizeKeywordsForCache(keywords)
+    .map((keyword) => keyword.toLowerCase())
+    .sort();
+  const normalizedFeedIds = normalizeFeedIds(feedIds).slice().sort();
+
+  return JSON.stringify({
+    keywords: normalizedKeywords,
+    feedIds: normalizedFeedIds,
+    ageDays,
+    includePrices,
+  });
 }
 
 function normalizeSource(item) {
@@ -283,6 +306,8 @@ function normalizeItem(item, keyword) {
     timeReported,
     tickers,
     ticker: tickers[0] || "N/A",
+    stockPrices: [],
+    stockPrice: null,
     articleUrl: item.link || "",
     finvizUrls: tickers.map(
       (ticker) =>
@@ -317,8 +342,229 @@ function normalizeCompanyName(value) {
   return value.toLowerCase().replace(/[^a-z0-9]/g, "");
 }
 
+function decodeHtmlEntities(value) {
+  return String(value || "")
+    .replace(/&amp;/gi, "&")
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;/gi, "'")
+    .replace(/&apos;/gi, "'")
+    .replace(/&lt;/gi, "<")
+    .replace(/&gt;/gi, ">")
+    .replace(/&nbsp;/gi, " ");
+}
+
+function extractMeaningfulTextFromHtml(html) {
+  if (!html) return "";
+
+  const withoutScripts = String(html)
+    .replace(/<script[\s\S]*?<\/script>/gi, " ")
+    .replace(/<style[\s\S]*?<\/style>/gi, " ")
+    .replace(/<noscript[\s\S]*?<\/noscript>/gi, " ");
+  const titleMatches = Array.from(
+    withoutScripts.matchAll(/<meta[^>]+property=["']og:title["'][^>]+content=["']([^"']+)["']/gi)
+  ).map((match) => decodeHtmlEntities(match[1]));
+  const descriptionMatches = Array.from(
+    withoutScripts.matchAll(
+      /<meta[^>]+(?:name|property)=["'](?:description|og:description)["'][^>]+content=["']([^"']+)["']/gi
+    )
+  ).map((match) => decodeHtmlEntities(match[1]));
+  const documentTitle =
+    decodeHtmlEntities(withoutScripts.match(/<title[^>]*>([^<]+)<\/title>/i)?.[1] || "") || "";
+  const bodyText = decodeHtmlEntities(withoutScripts.replace(/<[^>]+>/g, " "));
+
+  return [documentTitle, ...titleMatches, ...descriptionMatches, bodyText]
+    .filter(Boolean)
+    .join(" ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 6000);
+}
+
+async function fetchArticleText(url) {
+  if (!url) return "";
+  if (articleContentCache.has(url)) {
+    return articleContentCache.get(url);
+  }
+
+  const fetchPromise = (async () => {
+    const response = await fetch(url, { headers: REQUEST_HEADERS });
+    if (!response.ok) {
+      throw new Error(`Article fetch failed with status ${response.status}`);
+    }
+
+    const html = await response.text();
+    return extractMeaningfulTextFromHtml(html);
+  })()
+    .catch(() => "")
+    .finally(() => {
+      setTimeout(() => {
+        articleContentCache.delete(url);
+      }, 10 * 60 * 1000);
+    });
+
+  articleContentCache.set(url, fetchPromise);
+  return fetchPromise;
+}
+
 function toFinvizTicker(ticker) {
   return ticker.replace(/[^A-Z0-9.]/g, "");
+}
+
+function formatQuoteCacheKey(tickers) {
+  return tickers
+    .map((ticker) => String(ticker || "").toUpperCase())
+    .filter(Boolean)
+    .sort()
+    .join(",");
+}
+
+function buildStooqSymbols(ticker) {
+  const normalized = String(ticker || "").trim().toLowerCase();
+  if (!normalized) return [];
+
+  if (normalized.includes(".")) {
+    return [normalized];
+  }
+
+  return [normalized, `${normalized}.us`];
+}
+
+async function fetchSingleYahooChartQuote(ticker) {
+  const response = await fetch(
+    `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(ticker)}?interval=1d&range=1d`,
+    {
+      headers: {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+      },
+    }
+  );
+
+  if (!response.ok) {
+    return null;
+  }
+
+  const data = await response.json();
+  const result = Array.isArray(data?.chart?.result) ? data.chart.result[0] : null;
+  const metaPrice =
+    typeof result?.meta?.regularMarketPrice === "number" ? result.meta.regularMarketPrice : null;
+
+  if (metaPrice !== null) {
+    return metaPrice;
+  }
+
+  const closeValue = result?.indicators?.quote?.[0]?.close?.[0];
+  return typeof closeValue === "number" ? closeValue : null;
+}
+
+async function fetchSingleStooqQuote(ticker) {
+  const stooqSymbols = buildStooqSymbols(ticker);
+
+  for (const stooqSymbol of stooqSymbols) {
+    const response = await fetch(`https://stooq.com/q/l/?s=${encodeURIComponent(stooqSymbol)}&i=d`, {
+      headers: {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+      },
+    });
+
+    if (!response.ok) {
+      continue;
+    }
+
+    const csv = await response.text();
+    const line = String(csv || "").trim().split(/\r?\n/)[0] || "";
+    const cells = line.split(",");
+    const closeValue = Number.parseFloat(cells[6]);
+
+    if (!Number.isNaN(closeValue)) {
+      return closeValue;
+    }
+  }
+
+  return null;
+}
+
+async function fetchQuoteMap(tickers) {
+  const sanitizedTickers = Array.from(
+    new Set(
+      (Array.isArray(tickers) ? tickers : [])
+        .map((ticker) => String(ticker || "").toUpperCase().trim())
+        .filter((ticker) => ticker && ticker !== "N/A")
+    )
+  );
+
+  if (!sanitizedTickers.length) {
+    return new Map();
+  }
+
+  const cacheKey = formatQuoteCacheKey(sanitizedTickers);
+  if (quoteLookupCache.has(cacheKey)) {
+    return quoteLookupCache.get(cacheKey);
+  }
+
+  const lookupPromise = (async () => {
+    const quoteMap = new Map();
+    const batchSize = 8;
+
+    for (let index = 0; index < sanitizedTickers.length; index += batchSize) {
+      const batch = sanitizedTickers.slice(index, index + batchSize);
+      await Promise.all(
+        batch.map(async (ticker) => {
+          try {
+            const closeValue =
+              (await fetchSingleYahooChartQuote(ticker)) ?? (await fetchSingleStooqQuote(ticker));
+            if (closeValue !== null) {
+              quoteMap.set(ticker, closeValue);
+            }
+          } catch {
+            // Ignore individual quote failures and leave the price as null.
+          }
+        })
+      );
+    }
+
+    return quoteMap;
+  })()
+    .catch(() => new Map())
+    .finally(() => {
+      setTimeout(() => {
+        quoteLookupCache.delete(cacheKey);
+      }, 15 * 1000);
+    });
+
+  quoteLookupCache.set(cacheKey, lookupPromise);
+  return lookupPromise;
+}
+
+async function enrichItemsWithStockPrices(items) {
+  const uniqueTickers = Array.from(
+    new Set(
+      items.flatMap((item) =>
+        Array.isArray(item.tickers)
+          ? item.tickers.map((ticker) => String(ticker || "").toUpperCase()).filter(Boolean)
+          : []
+      )
+    )
+  );
+  const quoteMap = await fetchQuoteMap(uniqueTickers);
+
+  return items.map((item) => {
+    const tickers = Array.isArray(item.tickers)
+      ? item.tickers.map((ticker) => String(ticker || "").toUpperCase()).filter(Boolean)
+      : [];
+    const stockPrices = tickers.map((ticker) => ({
+      ticker,
+      price: quoteMap.get(ticker) ?? null,
+    }));
+    const primaryTicker = String(item.ticker || "").toUpperCase();
+    const primaryStockPrice =
+      primaryTicker && primaryTicker !== "N/A" ? quoteMap.get(primaryTicker) ?? null : null;
+
+    return {
+      ...item,
+      stockPrices,
+      stockPrice: primaryStockPrice,
+    };
+  });
 }
 
 function extractCompanyCandidates(headline) {
@@ -360,6 +606,39 @@ function extractCompanyCandidates(headline) {
   }
 
   return Array.from(candidates).slice(0, 5);
+}
+
+function extractDeepCompanyCandidates(text) {
+  if (!text) return [];
+
+  const candidateCounts = new Map();
+  const addCandidate = (value, weight = 1) => {
+    const candidate = cleanCompanyCandidate(value || "");
+    if (!candidate || COMPANY_STOPWORDS.has(candidate)) {
+      return;
+    }
+
+    candidateCounts.set(candidate, (candidateCounts.get(candidate) || 0) + weight);
+  };
+
+  extractCompanyCandidates(text).forEach((candidate) => addCandidate(candidate, 3));
+
+  const phrasePatterns = [
+    /\b([A-Z][A-Za-z0-9.&'\-]+(?:\s+[A-Z][A-Za-z0-9.&'\-]+){1,4})\b/g,
+    /\b([A-Z][A-Za-z0-9.&'\-]*[A-Z][A-Za-z0-9.&'\-]*)\b/g,
+  ];
+
+  for (const pattern of phrasePatterns) {
+    const matches = text.matchAll(pattern);
+    for (const match of matches) {
+      addCandidate(match[1], 1);
+    }
+  }
+
+  return Array.from(candidateCounts.entries())
+    .sort((left, right) => right[1] - left[1])
+    .map(([candidate]) => candidate)
+    .slice(0, 10);
 }
 
 async function lookupTickerByCompanyName(companyName) {
@@ -452,6 +731,65 @@ async function enrichTickersFromHeadline(item) {
   };
 }
 
+async function enrichTickerFromArticle(item) {
+  if (item.ticker && item.ticker !== "N/A") {
+    return item;
+  }
+
+  const articleText = await fetchArticleText(item.articleUrl);
+  if (!articleText) {
+    return item;
+  }
+
+  const candidates = extractDeepCompanyCandidates(articleText);
+  for (const candidate of candidates) {
+    const ticker = await lookupTickerByCompanyName(candidate);
+    if (!ticker) {
+      continue;
+    }
+
+    const tickers = Array.from(new Set([...(item.tickers || []), ticker]));
+    return {
+      ...item,
+      tickers,
+      ticker: tickers[0] || "N/A",
+      finvizUrls: tickers.map(
+        (resolvedTicker) =>
+          `https://finviz.com/quote.ashx?t=${encodeURIComponent(toFinvizTicker(resolvedTicker))}&p=d`
+      ),
+      finvizUrl: tickers[0]
+        ? `https://finviz.com/quote.ashx?t=${encodeURIComponent(toFinvizTicker(tickers[0]))}&p=d`
+        : "",
+    };
+  }
+
+  return item;
+}
+
+async function enrichItemsWithDeepTickerLookup(items) {
+  const output = [...items];
+  const unresolvedEntries = output
+    .map((item, index) => ({ item, index }))
+    .filter((entry) => !entry.item.ticker || entry.item.ticker === "N/A");
+  const batchSize = 3;
+
+  for (let index = 0; index < unresolvedEntries.length; index += batchSize) {
+    const batch = unresolvedEntries.slice(index, index + batchSize);
+    const batchResults = await Promise.all(
+      batch.map(async (entry) => ({
+        index: entry.index,
+        item: await enrichTickerFromArticle(entry.item),
+      }))
+    );
+
+    batchResults.forEach((result) => {
+      output[result.index] = result.item;
+    });
+  }
+
+  return output;
+}
+
 function dedupeItems(items) {
   const seen = new Set();
   const output = [];
@@ -494,13 +832,12 @@ async function fetchProviderFeed(provider, keywords) {
   return Promise.all(normalizedItems.map(enrichTickersFromHeadline));
 }
 
-async function fetchNews(ageDays = MAX_ITEM_AGE_DAYS) {
-  const keywords = getKeywords();
-  const feedIds = getDefaultFeedIds();
-  return fetchNewsForKeywords(keywords, feedIds, ageDays);
-}
-
-async function fetchNewsForKeywords(keywords, feedIds, ageDays = MAX_ITEM_AGE_DAYS) {
+async function fetchNewsForKeywords(
+  keywords,
+  feedIds,
+  ageDays = MAX_ITEM_AGE_DAYS,
+  includePrices = false
+) {
   const providers = normalizeFeedIds(feedIds).map((feedId) => FEED_PROVIDER_MAP.get(feedId));
   const fetchJobs = [];
 
@@ -545,12 +882,17 @@ async function fetchNewsForKeywords(keywords, feedIds, ageDays = MAX_ITEM_AGE_DA
   const normalized = dedupeItems(rows)
     .filter((item) => isFreshEnough(item.timeReported, ageDays))
     .sort((a, b) => new Date(b.timeReported).getTime() - new Date(a.timeReported).getTime());
+  const deepEnrichedItems = await enrichItemsWithDeepTickerLookup(normalized);
+  const itemsWithPrices = includePrices
+    ? await enrichItemsWithStockPrices(deepEnrichedItems)
+    : deepEnrichedItems;
 
   return {
     fetchedAt: new Date().toISOString(),
     refreshIntervalMs: CACHE_TTL_MS,
     ageDays,
-    total: normalized.length,
+    includePrices,
+    total: itemsWithPrices.length,
     keywords,
     feedIds: providers.map((provider) => provider.id),
     feeds: providers.map((provider) => ({
@@ -559,22 +901,50 @@ async function fetchNewsForKeywords(keywords, feedIds, ageDays = MAX_ITEM_AGE_DA
       description: provider.description,
     })),
     errors,
-    items: normalized,
+    items: itemsWithPrices,
   };
 }
 
-async function getCachedNews(ageDays = MAX_ITEM_AGE_DAYS) {
+async function getCachedNewsForRequest(keywords, feedIds, ageDays = MAX_ITEM_AGE_DAYS, includePrices = false) {
+  const normalizedKeywords = normalizeKeywordsForCache(keywords);
+  const normalizedFeedIds = normalizeFeedIds(feedIds);
+  const cacheKey = buildNewsCacheKey(normalizedKeywords, normalizedFeedIds, ageDays, includePrices);
   const now = Date.now();
-  if (ageDays === MAX_ITEM_AGE_DAYS && cache.payload && now - cache.fetchedAt < CACHE_TTL_MS) {
-    return cache.payload;
+  const cachedEntry = requestCache.get(cacheKey);
+
+  if (cachedEntry?.payload && now - cachedEntry.fetchedAt < CACHE_TTL_MS) {
+    return cachedEntry.payload;
   }
 
-  const payload = await fetchNews(ageDays);
-  if (ageDays === MAX_ITEM_AGE_DAYS) {
-    cache.fetchedAt = now;
-    cache.payload = payload;
+  if (cachedEntry?.promise) {
+    return cachedEntry.promise;
   }
-  return payload;
+
+  const fetchPromise = fetchNewsForKeywords(
+    normalizedKeywords.length ? normalizedKeywords : getKeywords(),
+    normalizedFeedIds,
+    ageDays,
+    includePrices
+  )
+    .then((payload) => {
+      requestCache.set(cacheKey, {
+        fetchedAt: Date.now(),
+        payload,
+      });
+      return payload;
+    })
+    .catch((error) => {
+      requestCache.delete(cacheKey);
+      throw error;
+    });
+
+  requestCache.set(cacheKey, {
+    fetchedAt: now,
+    payload: cachedEntry?.payload || null,
+    promise: fetchPromise,
+  });
+
+  return fetchPromise;
 }
 
   app.use(express.json());
@@ -593,6 +963,9 @@ app.get("/api/feeds", (req, res) => {
 
 app.get("/api/news", async (req, res) => {
   try {
+    const includePrices =
+      typeof req.query.includePrices === "string" &&
+      req.query.includePrices.trim().toLowerCase() === "true";
     const requestedAgeDays =
       typeof req.query.ageDays === "string" && req.query.ageDays.trim()
         ? normalizeAgeDays(req.query.ageDays)
@@ -611,13 +984,12 @@ app.get("/api/news", async (req, res) => {
             .map((feedId) => feedId.trim())
             .filter(Boolean)
         : null;
-    const payload = requestedKeywords?.length
-      ? await fetchNewsForKeywords(
-          requestedKeywords,
-          requestedFeedIds || getDefaultFeedIds(),
-          requestedAgeDays
-        )
-      : await getCachedNews(requestedAgeDays);
+    const payload = await getCachedNewsForRequest(
+      requestedKeywords?.length ? requestedKeywords : getKeywords(),
+      requestedFeedIds || getDefaultFeedIds(),
+      requestedAgeDays,
+      includePrices
+    );
     res.json(payload);
   } catch (error) {
     res.status(500).json({

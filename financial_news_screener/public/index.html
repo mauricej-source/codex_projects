@@ -13,12 +13,19 @@
     <link rel="stylesheet" href="/styles.css" />
   </head>
   <body>
+    <div id="loadingOverlay" class="loading-overlay" hidden>
+      <div class="loading-spinner" aria-hidden="true"></div>
+      <p>Refreshing market news...</p>
+    </div>
     <div class="page-shell">
       <section class="top-card">
         <div class="top-card-toolbar">
           <button id="toggleTopPanelButton" class="panel-toggle-button" type="button" aria-expanded="true">
-            Collapse Top Panel
+            ˄
           </button>
+        </div>
+        <div class="top-card-collapsed-summary" aria-hidden="true">
+          <p>News Scanner - Live Monitor</p>
         </div>
         <header class="hero">
           <div>
@@ -33,6 +40,9 @@
             <p><span>Status</span><strong id="status">Loading</strong></p>
             <p><span>Last Refresh</span><strong id="lastRefresh">-</strong></p>
             <p><span>Matches</span><strong id="matchCount">0</strong></p>
+            <div class="meta-card-actions">
+              <button id="resetButton" type="button">Page Reset</button>
+            </div>
           </div>
         </header>
 
@@ -77,10 +87,19 @@
       </section>
 
       <section class="table-card">
+        <div class="table-card-toolbar">
+          <button
+            id="toggleResultsPanelButton"
+            class="panel-toggle-button panel-toggle-button-inline"
+            type="button"
+            aria-expanded="true"
+          >
+            ˄
+          </button>
+        </div>
         <div class="table-header">
           <div>
             <h2>Latest Results</h2>
-            <p id="summary">Fetching news sources...</p>
           </div>
           <div class="table-actions">
             <div class="grouping-controls">
@@ -118,9 +137,30 @@
                   <option value="source">News Source</option>
                 </select>
               </label>
+              <label class="grouping-control grouping-control-price-range">
+                <span>Price Range</span>
+                <div class="price-range-inputs">
+                  <input
+                    id="minPriceInput"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    inputmode="decimal"
+                    placeholder="Min"
+                  />
+                  <input
+                    id="maxPriceInput"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    inputmode="decimal"
+                    placeholder="Max"
+                  />
+                </div>
+              </label>
             </div>
-            <button id="resetButton" type="button">Reset All</button>
-            <button id="refreshButton" type="button">Refresh Now</button>
+            <button id="loadPricesButton" type="button">Load Prices</button>
+            <button id="refreshButton" type="button">Table Refresh</button>
           </div>
         </div>
 
@@ -137,11 +177,51 @@
                   <th><button class="sort-button" type="button" data-sort-key="headline">News Title</button></th>
                   <th><button class="sort-button" type="button" data-sort-key="timeReported">Time Reported</button></th>
                   <th><button class="sort-button" type="button" data-sort-key="ticker">Stock Ticker Symbol</button></th>
+                  <th><button class="sort-button" type="button" data-sort-key="stockPrice">Stock Price</button></th>
                   <th><button class="sort-button" type="button" data-sort-key="articleUrl">News Link</button></th>
                   <th><button class="sort-button" type="button" data-sort-key="finvizUrl">Technical Chart</button></th>
                 </tr>
               </thead>
               <tbody id="newsTableBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <section id="researchCard" class="table-card research-card" hidden>
+        <div class="table-header">
+          <div>
+            <h2>Requires Research</h2>
+          </div>
+          <div class="table-actions">
+            <button
+              id="toggleResearchPanelButton"
+              class="panel-toggle-button panel-toggle-button-inline"
+              type="button"
+              aria-expanded="true"
+            >
+              ˄
+            </button>
+          </div>
+        </div>
+
+        <div class="table-panel">
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th><button class="sort-button" type="button" data-sort-key="keyword">Keyword</button></th>
+                  <th><button class="sort-button" type="button" data-sort-key="providerName">News Feed</button></th>
+                  <th><button class="sort-button" type="button" data-sort-key="source">News Source</button></th>
+                  <th><button class="sort-button" type="button" data-sort-key="headline">News Title</button></th>
+                  <th><button class="sort-button" type="button" data-sort-key="timeReported">Time Reported</button></th>
+                  <th><button class="sort-button" type="button" data-sort-key="ticker">Stock Ticker Symbol</button></th>
+                  <th><button class="sort-button" type="button" data-sort-key="stockPrice">Stock Price</button></th>
+                  <th><button class="sort-button" type="button" data-sort-key="articleUrl">News Link</button></th>
+                  <th><button class="sort-button" type="button" data-sort-key="finvizUrl">Technical Chart</button></th>
+                </tr>
+              </thead>
+              <tbody id="researchTableBody"></tbody>
             </table>
           </div>
         </div>

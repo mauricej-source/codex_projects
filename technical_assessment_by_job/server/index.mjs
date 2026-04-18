@@ -2,7 +2,6 @@ import express from 'express';
 import { WorkbookAssessmentQuestionService } from './workbookAssessmentQuestionService.mjs';
 
 const PORT = Number(process.env.QUESTION_API_PORT || 4176);
-const QUESTION_SOURCE_MODE = process.env.QUESTION_SOURCE_MODE || 'workbook';
 
 const app = express();
 const workbookQuestionService = new WorkbookAssessmentQuestionService();
@@ -25,7 +24,7 @@ app.use((request, response, next) => {
 app.get('/api/health', (_request, response) => {
   response.json({
     status: 'ok',
-    providerMode: QUESTION_SOURCE_MODE,
+    providerMode: 'workbook',
     workbookConfigured: workbookQuestionService.isConfigured(),
   });
 });
@@ -92,6 +91,6 @@ app.post('/api/generate-questions', async (request, response) => {
 
 app.listen(PORT, () => {
   console.log(
-    `Question API listening on http://localhost:${PORT} (mode=${QUESTION_SOURCE_MODE}, workbookConfigured=${workbookQuestionService.isConfigured()})`,
+    `Question API listening on http://localhost:${PORT} (mode=workbook, workbookConfigured=${workbookQuestionService.isConfigured()})`,
   );
 });

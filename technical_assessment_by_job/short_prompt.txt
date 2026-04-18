@@ -1,0 +1,29 @@
+Create a React + TypeScript single page web app for technical interview preparation.
+
+Features:
+1. Upload or paste a job description.
+2. Parse the job description and extract technical keywords.
+3. Group keywords into categories like Programming Languages, Frontend, Backend, Databases, Cloud, DevOps, Testing, Security, Architecture, and Other.
+4. Show category-based dropdowns or multiselect inputs so the user can choose one or more technologies.
+5. Generate a multiple-choice technical assessment based on the selected technologies.
+6. Each question must have 4 options and 1 correct answer.
+7. Let the user complete the assessment and submit it.
+8. Score the assessment and show:
+   - total correct
+   - percentage
+   - pass/fail
+   - review with correct answers and explanations
+9. Include sample local data so the app works without external APIs.
+10. Use a clean, modern, responsive UI.
+
+Tech stack:
+- React
+- TypeScript
+- Tailwind CSS
+
+Implementation notes:
+- Use a local keyword dictionary and rules-based categorization.
+- Use a local question bank for common technologies like JavaScript, React, Python, SQL, AWS, Docker, and Kubernetes.
+- Organize code into reusable components.
+- Include setup instructions and comments.
+- Make the app production-quality and runnable locally.

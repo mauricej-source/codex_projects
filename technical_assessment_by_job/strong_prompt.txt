@@ -1,0 +1,176 @@
+Build a polished Single Page Web Application for interview preparation, focused on technical assessments.
+
+Goal:
+Create a web app that allows a user to upload a job description, extract relevant technical keywords, group those keywords by technology category, let the user choose one or more categories from dropdowns, generate multiple-choice technical interview questions, allow the user to complete the assessment, and score the final results.
+
+Technical expectations:
+- Build this as a modern single-page web app.
+- Use a clean, professional UI suitable for desktop first, but responsive on mobile.
+- Prefer a React frontend.
+- Keep the code organized, readable, and production-quality.
+- Use mock/local logic where external APIs are not available.
+- Include clear comments and a short README section in the output explaining how it works and how to run it.
+
+Functional requirements:
+
+1. Job Description Upload
+- Provide a file upload area that accepts:
+  - .txt
+  - .pdf
+  - .docx if practical, otherwise support .txt and .pdf first
+- Also provide a large textarea so the user can paste a job description manually.
+- After upload or paste, display the parsed job description content in a readable panel.
+
+2. Parse Uploaded Job Description for Keywords
+- Extract relevant technical keywords and phrases from the job description.
+- Focus on technical and industry-related items such as:
+  - programming languages
+  - frameworks
+  - cloud platforms
+  - databases
+  - DevOps tools
+  - testing tools
+  - data tools
+  - architecture concepts
+  - security concepts
+  - methodologies
+- Remove common stop words and irrelevant business filler.
+- Deduplicate keywords.
+- Show extracted keywords as chips or tags on the screen.
+
+3. Categorize Keywords into Industry Technology Types
+- Group extracted keywords into dropdown-friendly categories such as:
+  - Programming Languages
+  - Frontend
+  - Backend
+  - Databases
+  - Cloud
+  - DevOps
+  - Testing
+  - Data Engineering / Analytics
+  - Security
+  - Architecture / Design
+  - Agile / Process
+  - Other
+- Use a reasonable rules-based mapping if no AI service is connected.
+- Display one or more dropdowns or multiselect controls based on these categories.
+- Each category should show only the relevant extracted keywords.
+- The user should be able to select one or more technologies across one or more categories.
+
+4. Generate Technical Interview Questions
+- After the user selects one or more technologies, generate a technical assessment.
+- Create a series of multiple-choice questions.
+- Each question should:
+  - be relevant to the selected technology
+  - have 4 answer choices
+  - have exactly 1 correct answer
+  - include a short explanation for the correct answer after submission
+- Generate at least 5 questions by default, with an option to choose 5, 10, or 15 questions.
+- Mix difficulty levels:
+  - easy
+  - medium
+  - hard
+- Ensure questions are realistic for job interviews and technical screenings.
+- Avoid duplicate questions.
+- If no real AI backend is available, implement a local question bank with sample questions for common technologies like:
+  - JavaScript
+  - TypeScript
+  - React
+  - Node.js
+  - Python
+  - Java
+  - SQL
+  - AWS
+  - Docker
+  - Kubernetes
+  - Git
+  - REST APIs
+
+5. Assessment Experience
+- Present one question at a time or in a paginated list with a clear progress indicator.
+- Allow the user to select an answer for each question.
+- Include:
+  - Next
+  - Previous
+  - Submit Assessment
+- Prevent accidental submission with unanswered questions unless the user confirms.
+- Show a timer optionally, but do not make timing mandatory.
+- Keep state on the client during the session.
+
+6. Score the Results
+- When the user submits the assessment:
+  - calculate total score
+  - show number correct out of total
+  - show percentage
+  - show performance by technology/category if possible
+- Display a results summary page with:
+  - final score
+  - pass/fail indicator based on configurable threshold, default 70%
+  - per-question review
+  - correct answer
+  - user’s selected answer
+  - brief explanation
+- Include an option to restart the assessment.
+
+7. Nice-to-have UX Features
+- Attractive layout with cards, badges, dropdowns, and progress indicators.
+- Error handling for invalid or empty uploads.
+- Loading states while parsing and generating questions.
+- Ability to clear current session and upload a new job description.
+- Persist uploaded text, selected technologies, generated questions, and score in local state.
+- Optional localStorage persistence for refresh recovery.
+
+Implementation details:
+- Build the app in a single project with clear component separation.
+- Suggested component structure:
+  - App
+  - JobDescriptionUploader
+  - ParsedKeywordsPanel
+  - TechnologySelector
+  - AssessmentGenerator
+  - QuestionCard
+  - ResultsSummary
+- Include sample seed data and fallback logic so the app works out of the box without external services.
+- Use a simple keyword extraction method if needed:
+  - tokenize text
+  - normalize case
+  - match against a known technical skills dictionary
+  - deduplicate results
+  - map matched terms to categories
+- Use a local in-memory question bank object keyed by technology.
+- When multiple technologies are selected, generate a balanced mix of questions across them.
+
+Design requirements:
+- Clean modern interface.
+- Professional interview-prep look and feel.
+- Responsive layout.
+- Accessible forms and buttons.
+- Use clear labels and instructional text.
+
+Acceptance criteria:
+- A user can upload or paste a job description.
+- The application extracts and displays technical keywords.
+- Keywords are grouped into technology categories.
+- The user can select one or more technologies from dropdowns/multiselect controls.
+- The app generates multiple-choice technical interview questions based on those selections.
+- The user can answer the questions and submit the assessment.
+- The app calculates and displays the score with explanations.
+
+Output requirements:
+- Generate all necessary code files.
+- Include sample question bank data for multiple technologies.
+- Ensure the app runs locally without requiring external APIs.
+- If file parsing for PDF/DOCX requires libraries, include them and wire them up cleanly.
+- Include clear setup instructions.
+- Make reasonable implementation decisions without asking follow-up questions.
+
+If possible, use:
+- React
+- TypeScript
+- Tailwind CSS
+- clean component-based architecture
+
+Bonus:
+- Add a “Recommended Focus Areas” section on the results page that highlights weak areas based on missed questions.
+- Add a difficulty filter.
+- Add a way to regenerate questions for the same selected technologies.

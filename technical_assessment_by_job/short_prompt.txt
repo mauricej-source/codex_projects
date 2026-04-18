@@ -1,29 +1,28 @@
-Create a React + TypeScript single page web app for technical interview preparation.
+Create a React + TypeScript single page web app for technical interview preparation driven by Excel seed files.
 
 Features:
 1. Upload or paste a job description.
 2. Parse the job description and extract technical keywords.
-3. Group keywords into categories like Programming Languages, Frontend, Backend, Databases, Cloud, DevOps, Testing, Security, Architecture, and Other.
-4. Show category-based dropdowns or multiselect inputs so the user can choose one or more technologies.
-5. Generate a multiple-choice technical assessment based on the selected technologies.
-6. Each question must have 4 options and 1 correct answer.
-7. Let the user complete the assessment and submit it.
-8. Score the assessment and show:
-   - total correct
-   - percentage
-   - pass/fail
-   - review with correct answers and explanations
-9. Include sample local data so the app works without external APIs.
-10. Use a clean, modern, responsive UI.
+3. Group keywords into technology categories and display the technologies as selectable chips.
+4. Let the user choose one or more technologies for an interview set.
+5. Generate a multiple-choice technical assessment from Excel workbooks stored in the `questions` folder.
+6. Resolve workbook files by lowercase technology prefix, such as `java_questions.xlsx` for Java and `python_questions.xlsx` for Python.
+7. If no matching workbook exists, show: `Unable to Generate Assessment, No Seed File`.
+8. Present one question at a time with 4 answer choices and 1 correct answer.
+9. Let the user complete the assessment, submit it, and review score, pass/fail, correct answers, and explanations.
+10. Track assessment history with number of assessments taken and average score.
 
 Tech stack:
 - React
 - TypeScript
 - Tailwind CSS
+- Express
+- `xlsx`
 
 Implementation notes:
-- Use a local keyword dictionary and rules-based categorization.
-- Use a local question bank for common technologies like JavaScript, React, Python, SQL, AWS, Docker, and Kubernetes.
-- Organize code into reusable components.
+- Use local parsing logic for keyword extraction.
+- Use workbook-backed question generation instead of LLM generation.
+- Read questions and answers directly from Excel files in the `questions` folder.
+- Prevent duplicate questions across the first 20 generated assessments.
+- Keep the UI polished, responsive, and production-quality.
 - Include setup instructions and comments.
-- Make the app production-quality and runnable locally.

@@ -30,6 +30,8 @@ This view focuses on assessment setup. After keyword extraction, the user select
 
 This view represents the active assessment experience. Questions are presented one at a time with multiple-choice answers, progress tracking, navigation controls, and a timer. The current assessment source reads workbook seed files from the `questions` folder and uses the matching technology workbook, such as `java_questions.xlsx`, when that technology is selected.
 
+Any Technology and or Keyword Extracted into an Assessment Chip, may or may not require an Excel File with the Questions and Answers that you would like your Generated Assessments built upon.  It is good to check the Projects 'Questions' Folder if the Generated Assessments Error.
+
 ### Results Summary Screen
 ![Technical Assessment Summary Results](./Technical_Assessment_Summary_Results.png)
 

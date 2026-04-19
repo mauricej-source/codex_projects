@@ -44,16 +44,28 @@ const findQuestionsDirectory = () =>
   WORKBOOK_DIRECTORIES.find((directory) => fs.existsSync(directory)) ??
   WORKBOOK_DIRECTORIES[0];
 
+const getWorkbookTechnologyKey = (fileName) =>
+  slugify(
+    fileName
+      .replace(/\.xlsx$/i, '')
+      .replace(/_questions$/i, '')
+      .replace(/ questions$/i, ''),
+  );
+
 const findWorkbookPathForTechnology = (technology) => {
   const directory = findQuestionsDirectory();
   if (!fs.existsSync(directory)) {
     return null;
   }
 
-  const prefix = `${slugify(technology)}_`;
+  const technologyKey = slugify(technology);
   const matchedFile = fs
     .readdirSync(directory)
-    .find((name) => name.toLowerCase().startsWith(prefix) && name.toLowerCase().endsWith('.xlsx'));
+    .find(
+      (name) =>
+        name.toLowerCase().endsWith('.xlsx') &&
+        getWorkbookTechnologyKey(name) === technologyKey,
+    );
 
   return matchedFile ? path.join(directory, matchedFile) : null;
 };

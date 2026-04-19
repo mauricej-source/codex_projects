@@ -39,7 +39,7 @@ export function JobDescriptionUploader({
           <p className="text-sm font-semibold uppercase tracking-[0.24em] text-teal-300/80">
             Step 1
           </p>
-          <h2 className="mt-1 text-2xl font-bold text-white">
+          <h2 className="mt-1 text-2xl font-bold text-[#9da6bf]">
             Upload or paste a job description
           </h2>
           <p className="mt-2 max-w-2xl text-sm text-slate-300">

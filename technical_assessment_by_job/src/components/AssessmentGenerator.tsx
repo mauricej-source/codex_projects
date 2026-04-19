@@ -51,7 +51,7 @@ export function AssessmentGenerator({
           <p className="text-sm font-semibold uppercase tracking-[0.24em] text-teal-300/80">
             Step 3
           </p>
-          <h2 className="mt-1 text-2xl font-bold text-white">Take the assessment</h2>
+          <h2 className="mt-1 text-2xl font-bold text-[#9da6bf]">Take the assessment</h2>
           <p className="mt-2 text-sm text-slate-300">
             One question at a time, with explanations available after submission.
           </p>

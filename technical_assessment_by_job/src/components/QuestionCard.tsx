@@ -13,17 +13,17 @@ export function QuestionCard({
   onSelectAnswer,
 }: QuestionCardProps) {
   return (
-    <article className="rounded-[28px] border border-white/10 bg-slate-950/60 p-6">
+    <article className="rounded-[28px] border border-black/10 bg-[#9da6bf] p-6 text-black">
       <div className="flex flex-wrap items-center gap-2">
-        <span className="rounded-full border border-teal-400/20 bg-teal-500/10 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-teal-200">
+        <span className="rounded-full border border-black/15 bg-white/35 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-black">
           {question.technology}
         </span>
-        <span className="rounded-full border border-amber-300/20 bg-amber-400/10 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-amber-100">
+        <span className="rounded-full border border-black/15 bg-white/35 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-black">
           {question.difficulty}
         </span>
       </div>
 
-      <h3 className="mt-4 text-xl font-semibold leading-8 text-white">{question.prompt}</h3>
+      <h3 className="mt-4 text-xl font-semibold leading-8 text-black">{question.prompt}</h3>
 
       <div className="mt-6 space-y-3">
         {question.choices.map((choice) => {
@@ -35,20 +35,20 @@ export function QuestionCard({
               onClick={() => onSelectAnswer(choice)}
               className={`flex w-full items-start gap-3 rounded-2xl border px-4 py-4 text-left transition ${
                 selected
-                  ? 'border-teal-400 bg-teal-500/10'
-                  : 'border-white/10 bg-white/5 hover:border-white/25 hover:bg-white/10'
+                  ? 'border-black/25 bg-white/55'
+                  : 'border-black/10 bg-white/25 hover:border-black/25 hover:bg-white/45'
               }`}
             >
               <span
                 className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border ${
                   selected
-                    ? 'border-teal-300 bg-teal-400 text-slate-950'
-                    : 'border-slate-500 text-transparent'
+                    ? 'border-black/30 bg-black text-white'
+                    : 'border-black/35 text-transparent'
                 }`}
               >
                 <CheckCircle2 className="h-4 w-4" />
               </span>
-              <span className="text-lg leading-7 text-slate-100">{choice}</span>
+              <span className="text-lg leading-7 text-black">{choice}</span>
             </button>
           );
         })}

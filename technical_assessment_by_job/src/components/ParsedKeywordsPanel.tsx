@@ -20,7 +20,7 @@ export function ParsedKeywordsPanel({
           <Sparkles className="h-4 w-4" />
           Extracted Keywords
         </div>
-        <h3 className="mt-1 text-xl font-bold text-white">Technical focus signals</h3>
+        <h3 className="mt-1 text-xl font-bold text-[#9da6bf]">Technical focus signals</h3>
         {!collapsed ? (
           <div className="mt-5 flex flex-wrap gap-2">
             {extractedKeywords.length > 0 ? (

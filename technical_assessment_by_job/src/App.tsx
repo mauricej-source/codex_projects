@@ -330,8 +330,8 @@ export default function App() {
               <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs font-semibold uppercase tracking-[0.24em] text-teal-200">
                 Technical Interview Prep
               </div>
-              <h1 className="mt-5 max-w-3xl text-4xl font-extrabold leading-tight text-white sm:text-5xl">
-                Turn a job description into a targeted technical assessment.
+              <h1 className="mt-5 max-w-3xl text-4xl font-extrabold leading-tight text-[#9da6bf] sm:text-5xl">
+                Generate Technical Assessment from Job Description
               </h1>
               <p className="mt-5 max-w-2xl text-base leading-8 text-slate-300">
                 Upload a role description, extract the relevant technologies, generate a

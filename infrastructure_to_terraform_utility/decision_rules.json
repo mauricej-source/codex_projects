@@ -1,0 +1,482 @@
+{
+  "version": "1.0.0",
+  "name": "aws-infrastructure-decision-rules",
+  "description": "Machine-readable rules for deriving AWS architecture recommendations and Terraform generation prerequisites from structured user input.",
+  "source": {
+    "report": "AWS Infrastructure Decision Utility for Terraform Generation.pdf",
+    "generated_on": "2026-04-19"
+  },
+  "input_contract": {
+    "workload": {
+      "app_type": ["static_site", "public_api", "web_app", "worker", "event_processor", "internal_app", "batch_job"],
+      "packaging": ["source_only", "function", "container", "vm"],
+      "runtime": ["node", "python", "java", "go", "dotnet", "other"],
+      "statefulness": ["stateless", "session_state", "shared_files", "stateful_service"],
+      "request_pattern": ["synchronous", "asynchronous", "mixed"],
+      "max_execution_time": ["short_under_15m", "long_running"],
+      "environments": ["dev", "staging", "prod"],
+      "single_tenant_or_multi_tenant": ["single", "multi"]
+    },
+    "traffic": {
+      "internet_exposed": ["yes", "no"],
+      "global_users": ["yes", "no"],
+      "estimated_rps": "integer",
+      "traffic_variability": ["steady", "diurnal", "spiky", "unpredictable"],
+      "websocket_or_streaming": ["yes", "no"],
+      "latency_sensitivity": ["low", "medium", "high"]
+    },
+    "data": {
+      "primary_data_model": ["none", "key_value", "document", "relational", "object", "file", "cache"],
+      "relational_features_needed": ["joins", "transactions", "reporting", "none"],
+      "read_write_profile": ["read_heavy", "write_heavy", "balanced"],
+      "data_retention": ["short", "medium", "long"],
+      "backups_required": ["yes", "no"],
+      "disaster_recovery_tier": ["none", "in_region_ha", "cross_region"]
+    },
+    "security_and_compliance": {
+      "data_sensitivity": ["public", "internal", "confidential", "regulated"],
+      "compliance": ["none", "soc2_like", "hipaa_like", "pci_like", "custom"],
+      "encryption_customer_managed": ["yes", "no"],
+      "public_access_exceptions": ["none", "approved_public_s3", "public_api", "public_alb"],
+      "secret_types": ["none", "app_secrets", "db_credentials", "api_keys"],
+      "human_access_model": ["console_ok", "federated_only", "break_glass_only"]
+    },
+    "networking": {
+      "needs_vpc_private_resources": ["yes", "no"],
+      "outbound_internet_needed_from_private": ["yes", "no"],
+      "private_connectivity_only": ["yes", "no"],
+      "on_prem_or_other_vpc_connectivity": ["yes", "no"]
+    },
+    "operations": {
+      "team_ops_maturity": ["low", "medium", "high"],
+      "logs_and_metrics_required": ["baseline", "enhanced", "audit_grade"],
+      "change_frequency": ["low", "medium", "high"]
+    },
+    "cost": {
+      "monthly_budget_band": ["minimal", "constrained", "moderate", "flexible"],
+      "cost_priority": ["lowest_possible", "balanced", "performance_first"],
+      "commitment_ok": ["none", "savings_plans_ok", "spot_ok"]
+    }
+  },
+  "required_blockers": [
+    "traffic.internet_exposed",
+    "workload.environments",
+    "security_and_compliance.data_sensitivity",
+    "data.primary_data_model",
+    "data.backups_required",
+    "cost.monthly_budget_band"
+  ],
+  "intermediate_architecture_spec": [
+    "compute_plane",
+    "ingress_plane",
+    "data_plane",
+    "network_plane",
+    "security_baseline",
+    "observability_baseline",
+    "cost_control_baseline"
+  ],
+  "recommendation_output_contract": {
+    "architecture_summary": "object",
+    "required_resources": "array",
+    "optional_resources": "array",
+    "security_controls": "array",
+    "cost_controls": "array",
+    "risks": "array",
+    "assumptions": "array",
+    "terraform_modules": "array",
+    "unresolved_questions": "array"
+  },
+  "service_catalog": {
+    "compute": ["lambda", "ecs_fargate", "ec2"],
+    "ingress": ["apigw_http_api", "apigw_rest_api", "alb", "cloudfront"],
+    "data": ["dynamodb", "rds", "aurora", "s3", "efs", "elasticache"],
+    "async": ["sqs", "eventbridge", "step_functions"],
+    "security": ["iam", "kms", "secrets_manager", "cloudtrail", "config", "guardduty", "security_hub", "waf", "access_analyzer", "backup", "inspector"],
+    "ops_and_cost": ["cloudwatch", "budgets", "cost_anomaly_detection", "compute_optimizer"]
+  },
+  "rules": {
+    "compute": [
+      {
+        "id": "compute_lambda_default",
+        "priority": 100,
+        "when_all": [
+          { "path": "workload.request_pattern", "in": ["synchronous", "asynchronous", "mixed"] },
+          { "path": "workload.max_execution_time", "equals": "short_under_15m" },
+          { "path": "workload.statefulness", "equals": "stateless" },
+          { "path": "traffic.traffic_variability", "in": ["spiky", "unpredictable"] },
+          { "path": "operations.team_ops_maturity", "in": ["low", "medium"] },
+          { "path": "workload.packaging", "in": ["source_only", "function"] }
+        ],
+        "select": {
+          "compute_plane": "lambda",
+          "required_resources": ["lambda", "iam_execution_role", "cloudwatch_log_group"]
+        },
+        "notes": ["Use Lambda for event-driven or request-driven, short-lived, mostly stateless workloads."]
+      },
+      {
+        "id": "compute_ecs_fargate_default",
+        "priority": 90,
+        "when_any": [
+          { "path": "workload.packaging", "equals": "container" },
+          { "path": "workload.max_execution_time", "equals": "long_running" },
+          { "path": "workload.statefulness", "in": ["session_state", "shared_files"] }
+        ],
+        "select": {
+          "compute_plane": "ecs_fargate",
+          "required_resources": ["ecr", "ecs_cluster", "ecs_task_definition", "ecs_service", "iam_task_role", "iam_execution_role", "cloudwatch_log_group"]
+        },
+        "notes": ["Use ECS on Fargate for managed containers and long-running application processes."]
+      },
+      {
+        "id": "compute_ec2_explicit_control",
+        "priority": 80,
+        "when_any": [
+          { "path": "workload.packaging", "equals": "vm" },
+          { "path": "operations.team_ops_maturity", "equals": "high" }
+        ],
+        "requires_assumption": "Workload requires OS-level control, custom agents, unusual networking, or licensing-specific infrastructure.",
+        "select": {
+          "compute_plane": "ec2",
+          "required_resources": ["launch_template", "autoscaling_group", "iam_instance_profile", "cloudwatch_log_group", "systems_manager_access"]
+        }
+      },
+      {
+        "id": "compute_public_api_gateway_lambda_bundle",
+        "priority": 95,
+        "when_all": [
+          { "path": "workload.app_type", "equals": "public_api" },
+          { "path": "workload.max_execution_time", "equals": "short_under_15m" },
+          { "path": "workload.packaging", "in": ["source_only", "function"] }
+        ],
+        "append_required_resources": ["apigw_http_api", "route53_optional", "custom_domain_optional"]
+      },
+      {
+        "id": "compute_async_lambda_bundle",
+        "priority": 70,
+        "when_any": [
+          { "path": "workload.app_type", "in": ["worker", "event_processor", "batch_job"] },
+          { "path": "workload.request_pattern", "equals": "asynchronous" }
+        ],
+        "append_optional_resources": ["sqs", "eventbridge", "step_functions"]
+      }
+    ],
+    "data": [
+      {
+        "id": "data_dynamodb_default",
+        "priority": 100,
+        "when_all": [
+          { "path": "data.primary_data_model", "in": ["key_value", "document"] },
+          { "path": "data.relational_features_needed", "equals": "none" }
+        ],
+        "select": {
+          "data_plane": "dynamodb",
+          "required_resources": ["dynamodb_table"]
+        },
+        "append_optional_resources": ["dynamodb_gsi", "dynamodb_streams"],
+        "notes": ["Choose DynamoDB when joins are not required and access patterns can be defined explicitly."]
+      },
+      {
+        "id": "data_relational_default",
+        "priority": 95,
+        "when_any": [
+          { "path": "data.primary_data_model", "equals": "relational" },
+          { "path": "data.relational_features_needed", "in": ["joins", "transactions", "reporting"] }
+        ],
+        "select": {
+          "data_plane": "rds_or_aurora",
+          "required_resources": ["db_subnet_group", "db_security_group", "db_instance_or_cluster", "secrets_manager_secret"]
+        },
+        "notes": ["Choose RDS or Aurora when SQL, joins, transactions, or reporting requirements are present."]
+      },
+      {
+        "id": "data_rds_lambda_proxy",
+        "priority": 85,
+        "when_all": [
+          { "path": "data.primary_data_model", "equals": "relational" },
+          { "path": "workload.max_execution_time", "equals": "short_under_15m" }
+        ],
+        "append_required_resources": ["rds_proxy"]
+      },
+      {
+        "id": "data_s3_default",
+        "priority": 90,
+        "when_any": [
+          { "path": "data.primary_data_model", "equals": "object" },
+          { "path": "workload.app_type", "equals": "static_site" },
+          { "path": "workload.statefulness", "equals": "shared_files" }
+        ],
+        "append_required_resources": ["s3_bucket"]
+      },
+      {
+        "id": "data_efs_explicit",
+        "priority": 60,
+        "when_all": [
+          { "path": "data.primary_data_model", "equals": "file" },
+          { "path": "workload.statefulness", "equals": "shared_files" }
+        ],
+        "append_required_resources": ["efs_file_system", "efs_mount_targets"]
+      },
+      {
+        "id": "data_cache_explicit",
+        "priority": 60,
+        "when_any": [
+          { "path": "data.primary_data_model", "equals": "cache" },
+          { "path": "data.read_write_profile", "equals": "read_heavy" }
+        ],
+        "append_optional_resources": ["elasticache_cluster"]
+      }
+    ],
+    "ingress": [
+      {
+        "id": "ingress_static_site",
+        "priority": 100,
+        "when_all": [
+          { "path": "workload.app_type", "equals": "static_site" }
+        ],
+        "select": {
+          "ingress_plane": "cloudfront_s3",
+          "required_resources": ["s3_bucket", "cloudfront_distribution", "origin_access_control", "acm_certificate", "route53"]
+        }
+      },
+      {
+        "id": "ingress_public_api_http_default",
+        "priority": 95,
+        "when_all": [
+          { "path": "workload.app_type", "equals": "public_api" }
+        ],
+        "select": {
+          "ingress_plane": "apigw_http_api"
+        },
+        "unless_any": [
+          { "path": "features.needs_api_keys", "equals": true },
+          { "path": "features.needs_per_client_throttling", "equals": true },
+          { "path": "features.needs_request_validation", "equals": true },
+          { "path": "features.needs_waf_on_api_gateway", "equals": true },
+          { "path": "features.needs_private_api", "equals": true }
+        ]
+      },
+      {
+        "id": "ingress_public_api_rest_when_needed",
+        "priority": 96,
+        "when_any": [
+          { "path": "features.needs_api_keys", "equals": true },
+          { "path": "features.needs_per_client_throttling", "equals": true },
+          { "path": "features.needs_request_validation", "equals": true },
+          { "path": "features.needs_waf_on_api_gateway", "equals": true },
+          { "path": "features.needs_private_api", "equals": true }
+        ],
+        "select": {
+          "ingress_plane": "apigw_rest_api"
+        }
+      },
+      {
+        "id": "ingress_alb_web_apps",
+        "priority": 90,
+        "when_all": [
+          { "path": "workload.app_type", "in": ["web_app", "internal_app"] }
+        ],
+        "select": {
+          "ingress_plane": "alb"
+        }
+      },
+      {
+        "id": "ingress_cloudfront_global",
+        "priority": 80,
+        "when_any": [
+          { "path": "traffic.global_users", "equals": "yes" },
+          { "path": "workload.app_type", "equals": "static_site" }
+        ],
+        "append_required_resources": ["cloudfront_distribution"]
+      }
+    ],
+    "network": [
+      {
+        "id": "network_private_resources",
+        "priority": 100,
+        "when_any": [
+          { "path": "networking.needs_vpc_private_resources", "equals": "yes" },
+          { "path": "security_and_compliance.data_sensitivity", "in": ["confidential", "regulated"] },
+          { "path": "data.primary_data_model", "equals": "relational" }
+        ],
+        "select": {
+          "network_plane": "vpc_private_tiers"
+        },
+        "append_required_resources": ["vpc", "private_subnets", "security_groups"]
+      },
+      {
+        "id": "network_public_edge_only",
+        "priority": 95,
+        "when_all": [
+          { "path": "traffic.internet_exposed", "equals": "yes" }
+        ],
+        "append_required_resources": ["public_subnets"],
+        "notes": ["Only edge-facing components such as internet-facing ALBs and NAT gateways should live in public subnets."]
+      },
+      {
+        "id": "network_nat_gateway",
+        "priority": 90,
+        "when_all": [
+          { "path": "networking.outbound_internet_needed_from_private", "equals": "yes" }
+        ],
+        "append_required_resources": ["nat_gateway"]
+      },
+      {
+        "id": "network_gateway_endpoints",
+        "priority": 92,
+        "when_all": [
+          { "path": "networking.needs_vpc_private_resources", "equals": "yes" }
+        ],
+        "append_optional_resources": ["s3_gateway_endpoint", "dynamodb_gateway_endpoint"],
+        "notes": ["Prefer gateway endpoints for S3 and DynamoDB traffic to reduce NAT dependency and cost."]
+      },
+      {
+        "id": "network_lambda_private_subnets",
+        "priority": 93,
+        "when_all": [
+          { "path": "networking.needs_vpc_private_resources", "equals": "yes" },
+          { "path": "workload.max_execution_time", "equals": "short_under_15m" }
+        ],
+        "append_assumptions": ["Lambda functions attached to the VPC must run in private subnets; public subnets do not provide outbound internet by themselves."]
+      },
+      {
+        "id": "network_multi_az_prod",
+        "priority": 88,
+        "when_all": [
+          { "path": "workload.environments", "contains": "prod" }
+        ],
+        "append_required_resources": ["multi_az_design"]
+      }
+    ],
+    "security": [
+      {
+        "id": "security_baseline_always",
+        "priority": 100,
+        "when_all": [],
+        "append_security_controls": ["iam_least_privilege", "cloudtrail", "config", "cloudwatch", "tagging_baseline"]
+      },
+      {
+        "id": "security_secrets_manager",
+        "priority": 95,
+        "when_any": [
+          { "path": "security_and_compliance.secret_types", "in": ["app_secrets", "db_credentials", "api_keys"] },
+          { "path": "data.primary_data_model", "equals": "relational" }
+        ],
+        "append_security_controls": ["secrets_manager"]
+      },
+      {
+        "id": "security_sensitive_workloads",
+        "priority": 98,
+        "when_any": [
+          { "path": "security_and_compliance.data_sensitivity", "in": ["confidential", "regulated"] },
+          { "path": "security_and_compliance.compliance", "in": ["soc2_like", "hipaa_like", "pci_like", "custom"] },
+          { "path": "workload.environments", "contains": "prod" }
+        ],
+        "append_security_controls": ["kms_encryption", "backup", "guardduty", "security_hub", "inspector"],
+        "append_required_resources": ["deletion_protection_on_stateful_services"],
+        "append_assumptions": ["Prefer multi-account landing zone for serious production or regulated workloads."]
+      },
+      {
+        "id": "security_waf_public_workloads",
+        "priority": 85,
+        "when_all": [
+          { "path": "traffic.internet_exposed", "equals": "yes" }
+        ],
+        "append_optional_resources": ["waf"]
+      },
+      {
+        "id": "security_s3_block_public_access",
+        "priority": 94,
+        "when_any": [
+          { "path": "workload.app_type", "equals": "static_site" },
+          { "path": "data.primary_data_model", "equals": "object" }
+        ],
+        "append_security_controls": ["s3_block_public_access_default_on", "access_analyzer"]
+      }
+    ],
+    "cost_and_ops": [
+      {
+        "id": "cost_baseline_always",
+        "priority": 100,
+        "when_all": [],
+        "append_cost_controls": ["aws_budgets", "cost_anomaly_detection", "cloudwatch"]
+      },
+      {
+        "id": "cost_compute_optimizer",
+        "priority": 80,
+        "when_any": [
+          { "path": "workload.packaging", "in": ["container", "vm"] },
+          { "path": "operations.team_ops_maturity", "equals": "high" }
+        ],
+        "append_cost_controls": ["compute_optimizer"]
+      },
+      {
+        "id": "ops_bias_managed_services",
+        "priority": 85,
+        "when_all": [
+          { "path": "operations.team_ops_maturity", "equals": "low" }
+        ],
+        "append_assumptions": ["Bias recommendations toward Lambda, Fargate, DynamoDB, and managed security controls."]
+      }
+    ]
+  },
+  "mvp_policies": [
+    {
+      "id": "policy_static_site",
+      "if": { "workload.app_type": "static_site" },
+      "then": {
+        "required_resources": ["s3_bucket", "cloudfront_distribution", "origin_access_control", "route53", "acm_certificate"],
+        "security_controls": ["s3_block_public_access_default_on"],
+        "optional_resources": ["waf"]
+      }
+    },
+    {
+      "id": "policy_public_api",
+      "if": { "workload.app_type": "public_api" },
+      "then": {
+        "decision_tree": [
+          "If REST-only gateway features are required, choose API Gateway REST API.",
+          "Otherwise choose API Gateway HTTP API.",
+          "If execution is short-lived and packaging is function/source_only, prefer Lambda.",
+          "If packaging is container or execution is long-running, prefer ECS Fargate.",
+          "Choose EC2 only when explicit control requirements exist."
+        ]
+      }
+    },
+    {
+      "id": "policy_web_or_internal_app",
+      "if": { "workload.app_type": ["web_app", "internal_app"] },
+      "then": {
+        "decision_tree": [
+          "If packaging is container, choose ECS Fargate plus ALB.",
+          "If packaging is vm, choose EC2 plus ASG plus ALB.",
+          "Use Lambda only when the workload is actually an API/event surface rather than a conventional web tier."
+        ]
+      }
+    }
+  ],
+  "terraform_generation": {
+    "gate_on_unresolved_questions": true,
+    "backend": {
+      "default": "s3",
+      "use_lockfile": true
+    },
+    "pin_versions": true,
+    "root_module_owns_provider_config": true,
+    "child_modules_declare_requirements_only": true,
+    "module_design_rules": [
+      "Prefer flat composition from the root module.",
+      "Create modules only for meaningful architectural concepts.",
+      "Avoid thin one-resource wrappers unless they encode a broader reusable contract."
+    ],
+    "recommended_modules": [
+      "network",
+      "api_ingress",
+      "ecs_service",
+      "lambda_api",
+      "rds_postgres",
+      "dynamodb_table",
+      "static_site",
+      "security_baseline"
+    ]
+  }
+}

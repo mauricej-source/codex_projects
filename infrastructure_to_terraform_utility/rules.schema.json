@@ -1,0 +1,230 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local/infrastructure_to_terraform_utility/rules.schema.json",
+  "title": "AWS Infrastructure Decision Rules Schema",
+  "description": "Validation schema for the machine-readable AWS infrastructure decision rules artifact.",
+  "type": "object",
+  "required": [
+    "version",
+    "name",
+    "description",
+    "input_contract",
+    "required_blockers",
+    "intermediate_architecture_spec",
+    "recommendation_output_contract",
+    "service_catalog",
+    "rules",
+    "terraform_generation"
+  ],
+  "properties": {
+    "version": {
+      "type": "string"
+    },
+    "name": {
+      "type": "string"
+    },
+    "description": {
+      "type": "string"
+    },
+    "source": {
+      "type": "object",
+      "properties": {
+        "report": { "type": "string" },
+        "generated_on": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "input_contract": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": {
+          "oneOf": [
+            {
+              "type": "array",
+              "items": {
+                "type": ["string", "number", "boolean"]
+              }
+            },
+            {
+              "type": "string"
+            }
+          ]
+        }
+      }
+    },
+    "required_blockers": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "intermediate_architecture_spec": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "recommendation_output_contract": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string"
+      }
+    },
+    "service_catalog": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "array",
+        "items": { "type": "string" }
+      }
+    },
+    "rules": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "array",
+        "items": {
+          "$ref": "#/$defs/rule"
+        }
+      }
+    },
+    "mvp_policies": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "if", "then"],
+        "properties": {
+          "id": { "type": "string" },
+          "if": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "then": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "terraform_generation": {
+      "type": "object",
+      "required": [
+        "gate_on_unresolved_questions",
+        "backend",
+        "pin_versions",
+        "root_module_owns_provider_config",
+        "child_modules_declare_requirements_only",
+        "module_design_rules",
+        "recommended_modules"
+      ],
+      "properties": {
+        "gate_on_unresolved_questions": { "type": "boolean" },
+        "backend": {
+          "type": "object",
+          "required": ["default", "use_lockfile"],
+          "properties": {
+            "default": { "type": "string" },
+            "use_lockfile": { "type": "boolean" }
+          },
+          "additionalProperties": false
+        },
+        "pin_versions": { "type": "boolean" },
+        "root_module_owns_provider_config": { "type": "boolean" },
+        "child_modules_declare_requirements_only": { "type": "boolean" },
+        "module_design_rules": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "recommended_modules": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "condition": {
+      "type": "object",
+      "required": ["path"],
+      "properties": {
+        "path": { "type": "string" },
+        "equals": {
+          "type": ["string", "number", "boolean"]
+        },
+        "in": {
+          "type": "array",
+          "items": {
+            "type": ["string", "number", "boolean"]
+          }
+        },
+        "contains": {
+          "type": ["string", "number", "boolean"]
+        }
+      },
+      "additionalProperties": false
+    },
+    "select": {
+      "type": "object",
+      "properties": {
+        "compute_plane": { "type": "string" },
+        "ingress_plane": { "type": "string" },
+        "data_plane": { "type": "string" },
+        "network_plane": { "type": "string" },
+        "required_resources": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      },
+      "additionalProperties": true
+    },
+    "rule": {
+      "type": "object",
+      "required": ["id", "priority"],
+      "properties": {
+        "id": { "type": "string" },
+        "priority": { "type": "number" },
+        "when_all": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/condition" }
+        },
+        "when_any": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/condition" }
+        },
+        "unless_any": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/condition" }
+        },
+        "select": {
+          "$ref": "#/$defs/select"
+        },
+        "append_required_resources": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "append_optional_resources": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "append_security_controls": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "append_cost_controls": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "append_assumptions": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "requires_assumption": {
+          "type": "string"
+        },
+        "notes": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

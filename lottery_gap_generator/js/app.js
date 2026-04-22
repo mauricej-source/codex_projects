@@ -16,6 +16,10 @@
     window.PowerballUI.renderTickets(elements, tickets, requestedCount);
   }
 
+  function rebuildDrawHistory() {
+    window.PowerballUI.renderDrawHistory(elements, state.rows, state.categories);
+  }
+
   function processData(csvOverride) {
     const csvText = typeof csvOverride === "string" ? csvOverride : elements.csvInput.value;
 
@@ -123,6 +127,15 @@
     elements.processBtn.addEventListener("click", () => processData());
     elements.ticketCount.addEventListener("change", handleTicketCountChange);
     elements.strategyMode.addEventListener("change", handleTicketCountChange);
+    if (elements.drawHistoryFilter) {
+      elements.drawHistoryFilter.addEventListener("change", () => {
+        if (!state.rows.length) {
+          return;
+        }
+
+        rebuildDrawHistory();
+      });
+    }
     bindCollapseToggles();
   }
 

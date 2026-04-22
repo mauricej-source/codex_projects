@@ -18,6 +18,66 @@
       warm: 0,
       cold: 0
     },
+    hotLight: {
+      label: "Hot Light",
+      hot: 3,
+      warm: 2,
+      cold: 0
+    },
+    warmLight: {
+      label: "Warm Light",
+      hot: 2,
+      warm: 3,
+      cold: 0
+    },
+    warmHeavy: {
+      label: "Warm Heavy",
+      hot: 1,
+      warm: 4,
+      cold: 0
+    },
+    allWarm: {
+      label: "All Warm",
+      hot: 0,
+      warm: 5,
+      cold: 0
+    },
+    lukeWarm: {
+      label: "Luke Warm",
+      hot: 1,
+      warm: 2,
+      cold: 2
+    },
+    warm: {
+      label: "Warm",
+      hot: 1,
+      warm: 3,
+      cold: 1
+    },
+    cool: {
+      label: "Cool",
+      hot: 0,
+      warm: 4,
+      cold: 1
+    },
+    cold: {
+      label: "Cold",
+      hot: 1,
+      warm: 1,
+      cold: 3
+    },
+    colder: {
+      label: "Colder",
+      hot: 0,
+      warm: 1,
+      cold: 4
+    },
+    coldest: {
+      label: "Coldest",
+      hot: 0,
+      warm: 0,
+      cold: 5
+    },
     mix: {
       label: "Strategy Mix"
     }
@@ -98,7 +158,7 @@
   }
 
   function createStrategyPlan(requestedCount) {
-    const cycle = ["balanced", "hotHeavy", "allHot"];
+    const cycle = ["balanced", "hotHeavy", "allHot", "hotLight", "warmHeavy"];
     const plan = [];
 
     for (let index = 0; index < requestedCount; index += 1) {

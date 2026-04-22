@@ -12,7 +12,7 @@
   <div class="fixed inset-0 -z-10 bg-slate-950"></div>
   <div class="fixed inset-0 -z-10 bg-[radial-gradient(circle_at_top,_rgba(16,185,129,0.18),_transparent_30%),radial-gradient(circle_at_bottom_right,_rgba(59,130,246,0.14),_transparent_32%)]"></div>
 
-  <main class="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+  <main class="mx-auto max-w-[87.09241953125rem] px-4 py-8 sm:px-6 lg:px-8">
     <header class="mb-3 rounded-3xl border border-emerald-500/20 bg-slate-900/85 p-6 shadow-[0_0_24px_rgba(16,185,129,0.28)] backdrop-blur">
       <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div>
@@ -40,8 +40,12 @@
       <article class="rounded-3xl border border-slate-800 bg-slate-900/80 p-6 shadow-[0_0_24px_rgba(16,185,129,0.28)]">
         <div class="mb-4 flex items-start justify-between gap-3">
           <div>
-            <p class="text-xs uppercase tracking-[0.25em] text-slate-500">Data Input</p>
-            <h2 class="text-xl font-semibold text-emerald-400">File Upload</h2>
+            <div class="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1">
+              <h2 class="text-xl font-semibold text-emerald-400">Process Data</h2>
+              <span class="text-xs uppercase tracking-[0.22em] text-slate-500">
+                Data Input - Load a CSV, XLS, or XLSX file, or paste CSV text to begin.
+              </span>
+            </div>
           </div>
           <button
             type="button"
@@ -55,79 +59,141 @@
           </button>
         </div>
 
-        <div id="upload-panel-body" class="grid gap-3 lg:grid-cols-[1.2fr_1fr]">
-          <div class="space-y-5">
-            <div>
-              <label for="csv-file" class="mb-2 block text-sm font-medium text-emerald-300">Upload Data File</label>
-              <input
-                id="csv-file"
-                type="file"
-                accept=".csv,.xls,.xlsx,text/csv,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-                class="block w-full rounded-2xl border border-slate-700 bg-slate-950/80 px-4 py-3 text-sm text-slate-300 file:mr-4 file:rounded-full file:border-0 file:bg-emerald-500/15 file:px-4 file:py-2 file:text-sm file:font-medium file:text-emerald-300 hover:file:bg-emerald-500/25"
+        <div id="upload-panel-body" class="space-y-5">
+          <div class="grid gap-3 lg:grid-cols-[60%_40%]">
+            <div class="space-y-5">
+              <div class="grid gap-3 xl:grid-cols-[minmax(0,1.2fr)_11rem_14rem]">
+                <div>
+                  <label for="csv-file" class="mb-2 block text-sm font-medium text-emerald-300">Upload Data File</label>
+                  <input
+                    id="csv-file"
+                    type="file"
+                    accept=".csv,.xls,.xlsx,text/csv,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                    class="block h-[3.5rem] w-full rounded-2xl border border-slate-700 bg-slate-950/80 px-4 py-3 text-sm text-slate-300 file:mr-4 file:rounded-full file:border-0 file:bg-emerald-500/15 file:px-4 file:py-2 file:text-sm file:font-medium file:text-emerald-300 hover:file:bg-emerald-500/25"
+                  >
+                </div>
+                <div>
+                  <label for="ticket-count" class="mb-2 block text-sm font-medium text-emerald-300">Number of Tickets</label>
+                  <input
+                    id="ticket-count"
+                    type="number"
+                    min="1"
+                    max="50"
+                    value="20"
+                    class="w-full rounded-2xl border border-slate-700 bg-slate-900 px-4 py-3 text-sm text-slate-100 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/30"
+                  >
+                </div>
+                <div>
+                  <label for="strategy-mode" class="mb-2 block text-sm font-medium text-emerald-300">Strategy Mode</label>
+                  <select
+                    id="strategy-mode"
+                    class="w-full rounded-2xl border border-slate-700 bg-slate-900 px-4 py-3 text-sm text-slate-100 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/30"
+                  >
+                    <option value="balanced">Balanced</option>
+                    <option value="hotHeavy">Hot-Heavy</option>
+                    <option value="allHot">All Hot</option>
+                    <option value="hotLight">Hot Light</option>
+                    <option value="warmLight">Warm Light</option>
+                    <option value="warmHeavy">Warm Heavy</option>
+                    <option value="allWarm">All Warm</option>
+                    <option value="lukeWarm">Luke Warm</option>
+                    <option value="warm">Warm</option>
+                    <option value="cool">Cool</option>
+                    <option value="cold">Cold</option>
+                    <option value="colder">Colder</option>
+                    <option value="coldest">Coldest</option>
+                    <option value="mix" selected>Strategy Mix</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="rounded-2xl border border-slate-800 bg-slate-900/70 p-4 text-sm text-slate-300">
+                <p class="font-medium text-emerald-300">Generator Logic</p>
+                <p class="mt-2 leading-6">Choose from the following strategy modes:</p>
+                <div class="mt-3 overflow-hidden rounded-2xl border border-slate-800">
+                  <table class="w-full table-auto divide-y divide-slate-800 text-sm text-slate-300">
+                    <thead class="bg-slate-950/80 text-slate-400">
+                      <tr>
+                        <th class="whitespace-nowrap px-4 py-3 text-left font-medium">Strategy</th>
+                        <th class="px-4 py-3 text-left font-medium">Pattern</th>
+                        <th class="whitespace-nowrap px-4 py-3 text-left font-medium">Strategy</th>
+                        <th class="px-4 py-3 text-left font-medium">Pattern</th>
+                      </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-800 bg-slate-900/40">
+                      <tr>
+                        <td class="whitespace-nowrap px-4 py-2">Balanced</td>
+                        <td class="px-4 py-2">2 Hot, 2 Warm, 1 Cold</td>
+                        <td class="whitespace-nowrap px-4 py-2">Luke Warm</td>
+                        <td class="px-4 py-2">1 Hot, 2 Warm, 2 Cold</td>
+                      </tr>
+                      <tr>
+                        <td class="whitespace-nowrap px-4 py-2">Hot-Heavy</td>
+                        <td class="px-4 py-2">4 Hot, 1 Warm</td>
+                        <td class="whitespace-nowrap px-4 py-2">Warm</td>
+                        <td class="px-4 py-2">1 Hot, 3 Warm, 1 Cold</td>
+                      </tr>
+                      <tr>
+                        <td class="whitespace-nowrap px-4 py-2">All Hot</td>
+                        <td class="px-4 py-2">5 Hot</td>
+                        <td class="whitespace-nowrap px-4 py-2">Cool</td>
+                        <td class="px-4 py-2">4 Warm, 1 Cold</td>
+                      </tr>
+                      <tr>
+                        <td class="whitespace-nowrap px-4 py-2">Hot Light</td>
+                        <td class="px-4 py-2">3 Hot, 2 Warm</td>
+                        <td class="whitespace-nowrap px-4 py-2">Cold</td>
+                        <td class="px-4 py-2">1 Hot, 1 Warm, 3 Cold</td>
+                      </tr>
+                      <tr>
+                        <td class="whitespace-nowrap px-4 py-2">Warm Light</td>
+                        <td class="px-4 py-2">2 Hot, 3 Warm</td>
+                        <td class="whitespace-nowrap px-4 py-2">Colder</td>
+                        <td class="px-4 py-2">1 Warm, 4 Cold</td>
+                      </tr>
+                      <tr>
+                        <td class="whitespace-nowrap px-4 py-2">Warm Heavy</td>
+                        <td class="px-4 py-2">1 Hot, 4 Warm</td>
+                        <td class="whitespace-nowrap px-4 py-2">Coldest</td>
+                        <td class="px-4 py-2">5 Cold</td>
+                      </tr>
+                      <tr>
+                        <td class="whitespace-nowrap px-4 py-2">All Warm</td>
+                        <td class="px-4 py-2">5 Warm</td>
+                        <td class="whitespace-nowrap px-4 py-2">Strategy Mix</td>
+                        <td class="px-4 py-2">Rotates across Balanced, Hot-Heavy, and All Hot</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+                <p class="mt-3 leading-6">
+                  All tickets must pass a 3:2 or 2:3 odd/even split and total 130-200. Powerballs use the middle "Warm" probability band.
+                </p>
+              </div>
+            </div>
+
+            <div class="flex h-full flex-col gap-5">
+              <div class="flex flex-1 flex-col">
+                <div class="mb-2 flex items-center justify-between gap-3">
+                  <label for="csv-input" class="block text-sm font-medium text-emerald-300">Paste CSV Data</label>
+                  <span class="text-xs text-slate-500">Expected header: Date, Ball 1, Ball 2, Ball 3, Ball 4, Ball 5, Powerball</span>
+                </div>
+                <textarea
+                  id="csv-input"
+                  rows="10"
+                  placeholder="Paste Powerball CSV rows here..."
+                  class="min-h-[28rem] flex-1 w-full rounded-2xl border border-slate-700 bg-slate-950/80 px-4 py-3 text-sm text-slate-200 outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/30"
+                ></textarea>
+              </div>
+
+              <button
+                id="process-btn"
+                type="button"
+                class="inline-flex items-center justify-center rounded-2xl bg-emerald-500 px-5 py-3 text-sm font-semibold text-slate-950 transition hover:bg-emerald-400"
               >
+                Process Data
+              </button>
             </div>
-
-            <div>
-              <div class="mb-2 flex items-center justify-between gap-3">
-                <label for="csv-input" class="block text-sm font-medium text-emerald-300">Paste CSV Data</label>
-                <span class="text-xs text-slate-500">Expected header: Date, Ball 1, Ball 2, Ball 3, Ball 4, Ball 5, Powerball</span>
-              </div>
-              <textarea
-                id="csv-input"
-                rows="10"
-                placeholder="Paste Powerball CSV rows here..."
-                class="w-full rounded-2xl border border-slate-700 bg-slate-950/80 px-4 py-3 text-sm text-slate-200 outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/30"
-              ></textarea>
-            </div>
-          </div>
-
-          <div class="flex flex-col justify-between gap-5 rounded-3xl border border-slate-800 bg-slate-950/80 p-5">
-            <div class="grid gap-3 md:grid-cols-2">
-              <div>
-                <label for="ticket-count" class="mb-2 block text-sm font-medium text-emerald-300">Number of Tickets</label>
-                <input
-                  id="ticket-count"
-                  type="number"
-                  min="1"
-                  max="50"
-                  value="20"
-                  class="w-full rounded-2xl border border-slate-700 bg-slate-900 px-4 py-3 text-sm text-slate-100 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/30"
-                >
-              </div>
-
-              <div>
-                <label for="strategy-mode" class="mb-2 block text-sm font-medium text-emerald-300">Strategy Mode</label>
-                <select
-                  id="strategy-mode"
-                  class="w-full rounded-2xl border border-slate-700 bg-slate-900 px-4 py-3 text-sm text-slate-100 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/30"
-                >
-                  <option value="balanced">Balanced</option>
-                  <option value="hotHeavy">Hot-Heavy</option>
-                  <option value="allHot">All Hot</option>
-                  <option value="mix" selected>Strategy Mix</option>
-                </select>
-              </div>
-            </div>
-
-            <div class="rounded-2xl border border-slate-800 bg-slate-900/70 p-4 text-sm text-slate-300">
-              <p class="font-medium text-emerald-300">Generator Logic</p>
-              <p class="mt-2 leading-6">
-                Choose Balanced (2 Hot, 2 Warm, 1 Cold), Hot-Heavy (4 Hot, 1 Warm), All Hot (5 Hot), or Strategy Mix.
-                All tickets must pass a 3:2 or 2:3 odd/even split and total 130-200. Powerballs use the middle "Warm" probability band.
-              </p>
-            </div>
-
-            <button
-              id="process-btn"
-              type="button"
-              class="inline-flex items-center justify-center rounded-2xl bg-emerald-500 px-5 py-3 text-sm font-semibold text-slate-950 transition hover:bg-emerald-400"
-            >
-              Process Data
-            </button>
-
-            <p id="feedback" class="min-h-12 rounded-2xl border border-slate-800 bg-slate-900/70 px-4 py-3 text-sm text-slate-400">
-              Load a CSV, XLS, or XLSX file, or paste CSV text to begin.
-            </p>
           </div>
         </div>
       </article>
@@ -243,17 +309,62 @@
           </button>
         </div>
 
-        <div id="chart-panel-body">
-          <div
-            id="frequency-category-summary"
-            class="mb-3 rounded-2xl border border-slate-800 bg-slate-950/55 px-4 py-3 text-sm leading-6 text-slate-300"
-          >
-            <div>Hot: --</div>
-            <div>Warm: --</div>
-            <div>Cold: --</div>
+        <div id="chart-panel-body" class="grid gap-3 xl:grid-cols-[33rem_minmax(0,1fr)]">
+          <div class="h-[26rem] rounded-3xl border border-slate-800 bg-slate-950/55 p-4 sm:h-[32rem] xl:h-[45.5rem]">
+            <div class="mb-3 flex items-center justify-between gap-3">
+              <div>
+                <p class="text-xs uppercase tracking-[0.22em] text-slate-500">Draw History</p>
+              </div>
+              <div class="flex items-center gap-3">
+                <span class="text-xs text-slate-500">Strategy, date, and balls</span>
+                <select
+                  id="draw-history-filter"
+                  class="rounded-xl border border-slate-700 bg-slate-900 px-3 py-2 text-xs text-slate-200 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/30"
+                >
+                  <option value="all">All Strategies</option>
+                  <option value="Balanced">Balanced</option>
+                  <option value="Hot-Heavy">Hot-Heavy</option>
+                  <option value="All Hot">All Hot</option>
+                  <option value="Hot Light">Hot Light</option>
+                  <option value="Warm Light">Warm Light</option>
+                  <option value="Warm Heavy">Warm Heavy</option>
+                  <option value="All Warm">All Warm</option>
+                  <option value="Luke Warm">Luke Warm</option>
+                  <option value="Warm">Warm</option>
+                  <option value="Cool">Cool</option>
+                  <option value="Cold">Cold</option>
+                  <option value="Colder">Colder</option>
+                  <option value="Coldest">Coldest</option>
+                  <option value="Mixed Draw">Mixed Draw</option>
+                </select>
+              </div>
+            </div>
+            <div class="h-[calc(100%-3.25rem)] overflow-auto rounded-2xl border border-slate-800">
+              <table class="min-w-full divide-y divide-slate-800 text-sm">
+                <thead class="sticky top-0 z-10 bg-slate-950/95 text-slate-400 backdrop-blur">
+                  <tr>
+                    <th class="px-4 py-3 text-left font-medium">Strategy</th>
+                    <th class="px-4 py-3 text-left font-medium">Date</th>
+                    <th class="px-4 py-3 text-left font-medium">Ball Numbers</th>
+                  </tr>
+                </thead>
+                <tbody id="draw-history-table" class="divide-y divide-slate-800 bg-slate-900/60"></tbody>
+              </table>
+            </div>
           </div>
-          <div class="h-[26rem] rounded-3xl border border-slate-800 bg-slate-950/70 p-3 sm:h-[32rem] xl:h-[42rem]">
-            <canvas id="frequency-chart"></canvas>
+
+          <div>
+            <div
+              id="frequency-category-summary"
+              class="mb-3 rounded-2xl border border-slate-800 bg-slate-950/55 px-4 py-3 text-sm leading-6 text-slate-300"
+            >
+              <div>Hot: --</div>
+              <div>Warm: --</div>
+              <div>Cold: --</div>
+            </div>
+            <div class="h-[26rem] rounded-3xl border border-slate-800 bg-slate-950/70 p-3 sm:h-[32rem] xl:h-[42rem]">
+              <canvas id="frequency-chart"></canvas>
+            </div>
           </div>
         </div>
       </article>
@@ -297,10 +408,12 @@
           </div>
 
           <div class="rounded-2xl border border-slate-800 bg-slate-950/55 p-4">
-            <h3 class="text-sm font-medium text-emerald-300">3. Ticket Strategy Modes</h3>
+            <h3 class="text-sm font-medium text-emerald-300">3. Strategy Families</h3>
             <p class="mt-2 text-sm leading-6 text-slate-300">
-              Balanced uses 2 Hot, 2 Warm, and 1 Cold. Hot-Heavy uses 4 Hot and 1 Warm. All Hot uses 5 Hot numbers.
-              Strategy Mix rotates across those three modes while still honoring the requested ticket count.
+              The generator now supports a broader set of named strategies built from Hot, Warm, and Cold counts.
+              Examples include Balanced, Hot-Heavy, All Hot, Hot Light, Warm Light, Warm Heavy, All Warm, Luke Warm,
+              Warm, Cool, Cold, Colder, and Coldest. Strategy Mix is still a rotation mode and currently cycles through
+              Balanced, Hot-Heavy, and All Hot.
             </p>
           </div>
 
@@ -309,6 +422,20 @@
             <p class="mt-2 text-sm leading-6 text-slate-300">
               Main-ball tickets are only kept if they have a 3:2 or 2:3 odd/even split and a total sum between 130 and 200.
               The Powerball is chosen randomly from the Warm Powerball group, which represents the middle band under the current gap model.
+            </p>
+          </div>
+
+          <div class="rounded-2xl border border-slate-800 bg-slate-950/55 p-4">
+            <h3 class="text-sm font-medium text-emerald-300">5. Strategy Definitions and Draw Labels</h3>
+            <p class="mt-2 text-sm leading-6 text-slate-300">
+              Balanced = 2 Hot, 2 Warm, 1 Cold. Hot-Heavy = 4 Hot, 1 Warm. All Hot = 5 Hot. Hot Light = 3 Hot, 2 Warm.
+              Warm Light = 2 Hot, 3 Warm. Warm Heavy = 1 Hot, 4 Warm. All Warm = 5 Warm. Luke Warm = 1 Hot, 2 Warm, 2 Cold.
+              Warm = 1 Hot, 3 Warm, 1 Cold. Cool = 4 Warm, 1 Cold. Cold = 1 Hot, 1 Warm, 3 Cold. Colder = 1 Warm, 4 Cold.
+              Coldest = 5 Cold.
+            </p>
+            <p class="mt-3 text-sm leading-6 text-slate-300">
+              The Draw History panel classifies each past row using the current Hot, Warm, and Cold groupings, then shows the exact pattern beneath
+              the strategy name. If a row does not match one of the named compositions, it is labeled Mixed Draw.
             </p>
           </div>
         </div>

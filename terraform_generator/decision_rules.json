@@ -1,7 +1,7 @@
 {
-  "version": "1.0.0",
+  "version": "1.1.0",
   "name": "aws-infrastructure-decision-rules",
-  "description": "Machine-readable rules for deriving AWS architecture recommendations and Terraform generation prerequisites from structured user input.",
+  "description": "Full production-grade machine-readable rules for deriving AWS architecture recommendations, now including gated Amazon EKS support while preserving all original Lambda, ECS, and EC2 logic.",
   "source": {
     "report": "AWS Infrastructure Decision Utility for Terraform Generation.pdf",
     "generated_on": "2026-04-19"
@@ -15,7 +15,10 @@
       "request_pattern": ["synchronous", "asynchronous", "mixed"],
       "max_execution_time": ["short_under_15m", "long_running"],
       "environments": ["dev", "staging", "prod"],
-      "single_tenant_or_multi_tenant": ["single", "multi"]
+      "single_tenant_or_multi_tenant": ["single", "multi"],
+      "orchestration_preference": ["none", "ecs_native", "kubernetes_native"],
+      "multi_tenancy_requirement": ["none", "namespace_isolation", "cluster_isolation"],
+      "portability_priority": ["provider_native", "k8s_standard"]
     },
     "traffic": {
       "internet_exposed": ["yes", "no"],
@@ -45,7 +48,8 @@
       "needs_vpc_private_resources": ["yes", "no"],
       "outbound_internet_needed_from_private": ["yes", "no"],
       "private_connectivity_only": ["yes", "no"],
-      "on_prem_or_other_vpc_connectivity": ["yes", "no"]
+      "on_prem_or_other_vpc_connectivity": ["yes", "no"],
+      "custom_cni_needed": ["yes", "no"]
     },
     "operations": {
       "team_ops_maturity": ["low", "medium", "high"],
@@ -64,7 +68,8 @@
     "security_and_compliance.data_sensitivity",
     "data.primary_data_model",
     "data.backups_required",
-    "cost.monthly_budget_band"
+    "cost.monthly_budget_band",
+    "workload.orchestration_preference"
   ],
   "intermediate_architecture_spec": [
     "compute_plane",
@@ -87,7 +92,7 @@
     "unresolved_questions": "array"
   },
   "service_catalog": {
-    "compute": ["lambda", "ecs_fargate", "ec2"],
+    "compute": ["lambda", "ecs_fargate", "ec2", "eks"],
     "ingress": ["apigw_http_api", "apigw_rest_api", "alb", "cloudfront"],
     "data": ["dynamodb", "rds", "aurora", "s3", "efs", "elasticache"],
     "async": ["sqs", "eventbridge", "step_functions"],
@@ -96,6 +101,27 @@
   },
   "rules": {
     "compute": [
+      {
+        "id": "compute_gate_eks",
+        "priority": 110,
+        "when_any": [
+          { "path": "workload.orchestration_preference", "equals": "kubernetes_native" },
+          { "path": "workload.multi_tenancy_requirement", "equals": "namespace_isolation" },
+          { "path": "workload.portability_priority", "equals": "k8s_standard" },
+          { "path": "networking.custom_cni_needed", "equals": "yes" }
+        ],
+        "select": {
+          "compute_plane": "eks",
+          "required_resources": ["eks_cluster", "eks_managed_node_group", "vpc_cni", "oidc_provider", "iam_node_role", "iam_cluster_role"]
+        },
+        "append_assumptions": [
+          "User accepts EKS control-plane fee of $0.10/hr.",
+          "Workload requires Kubernetes-native APIs, Helm, or Operators.",
+          "Team possesses high ops maturity for K8s lifecycle management."
+        ],
+        "append_security_controls": ["kms_key_eks", "irsa_iam_roles", "control_plane_logging"],
+        "notes": ["EKS should be selected only when Kubernetes is itself part of the user's required capability set."]
+      },
       {
         "id": "compute_lambda_default",
         "priority": 100,
@@ -106,6 +132,9 @@
           { "path": "traffic.traffic_variability", "in": ["spiky", "unpredictable"] },
           { "path": "operations.team_ops_maturity", "in": ["low", "medium"] },
           { "path": "workload.packaging", "in": ["source_only", "function"] }
+        ],
+        "unless_any": [
+          { "path": "workload.orchestration_preference", "equals": "kubernetes_native" }
         ],
         "select": {
           "compute_plane": "lambda",
@@ -120,6 +149,9 @@
           { "path": "workload.packaging", "equals": "container" },
           { "path": "workload.max_execution_time", "equals": "long_running" },
           { "path": "workload.statefulness", "in": ["session_state", "shared_files"] }
+        ],
+        "unless_any": [
+          { "path": "workload.orchestration_preference", "equals": "kubernetes_native" }
         ],
         "select": {
           "compute_plane": "ecs_fargate",
@@ -147,6 +179,9 @@
           { "path": "workload.app_type", "equals": "public_api" },
           { "path": "workload.max_execution_time", "equals": "short_under_15m" },
           { "path": "workload.packaging", "in": ["source_only", "function"] }
+        ],
+        "unless_any": [
+          { "path": "workload.orchestration_preference", "equals": "kubernetes_native" }
         ],
         "append_required_resources": ["apigw_http_api", "route53_optional", "custom_domain_optional"]
       },
@@ -252,7 +287,8 @@
           { "path": "features.needs_per_client_throttling", "equals": true },
           { "path": "features.needs_request_validation", "equals": true },
           { "path": "features.needs_waf_on_api_gateway", "equals": true },
-          { "path": "features.needs_private_api", "equals": true }
+          { "path": "features.needs_private_api", "equals": true },
+          { "path": "workload.orchestration_preference", "equals": "kubernetes_native" }
         ]
       },
       {
@@ -265,6 +301,9 @@
           { "path": "features.needs_waf_on_api_gateway", "equals": true },
           { "path": "features.needs_private_api", "equals": true }
         ],
+        "unless_any": [
+          { "path": "workload.orchestration_preference", "equals": "kubernetes_native" }
+        ],
         "select": {
           "ingress_plane": "apigw_rest_api"
         }
@@ -272,12 +311,14 @@
       {
         "id": "ingress_alb_web_apps",
         "priority": 90,
-        "when_all": [
-          { "path": "workload.app_type", "in": ["web_app", "internal_app"] }
+        "when_any": [
+          { "path": "workload.app_type", "in": ["web_app", "internal_app"] },
+          { "path": "workload.orchestration_preference", "equals": "kubernetes_native" }
         ],
         "select": {
           "ingress_plane": "alb"
-        }
+        },
+        "append_optional_resources": ["aws_load_balancer_controller"]
       },
       {
         "id": "ingress_cloudfront_global",
@@ -296,7 +337,8 @@
         "when_any": [
           { "path": "networking.needs_vpc_private_resources", "equals": "yes" },
           { "path": "security_and_compliance.data_sensitivity", "in": ["confidential", "regulated"] },
-          { "path": "data.primary_data_model", "equals": "relational" }
+          { "path": "data.primary_data_model", "equals": "relational" },
+          { "path": "workload.orchestration_preference", "equals": "kubernetes_native" }
         ],
         "select": {
           "network_plane": "vpc_private_tiers"
@@ -315,8 +357,9 @@
       {
         "id": "network_nat_gateway",
         "priority": 90,
-        "when_all": [
-          { "path": "networking.outbound_internet_needed_from_private", "equals": "yes" }
+        "when_any": [
+          { "path": "networking.outbound_internet_needed_from_private", "equals": "yes" },
+          { "path": "workload.orchestration_preference", "equals": "kubernetes_native" }
         ],
         "append_required_resources": ["nat_gateway"]
       },
@@ -415,7 +458,19 @@
         "when_all": [
           { "path": "operations.team_ops_maturity", "equals": "low" }
         ],
+        "unless_any": [
+          { "path": "workload.orchestration_preference", "equals": "kubernetes_native" }
+        ],
         "append_assumptions": ["Bias recommendations toward Lambda, Fargate, DynamoDB, and managed security controls."]
+      },
+      {
+        "id": "cost_eks_warning",
+        "priority": 110,
+        "when_all": [
+          { "path": "workload.orchestration_preference", "equals": "kubernetes_native" }
+        ],
+        "append_cost_controls": ["eks_control_plane_billing_alert"],
+        "append_risks": ["EKS introduces a minimum fixed cost of ~$72/month for the control plane."]
       }
     ]
   },
@@ -434,6 +489,7 @@
       "if": { "workload.app_type": "public_api" },
       "then": {
         "decision_tree": [
+          "If orchestration preference is kubernetes_native, choose EKS.",
           "If REST-only gateway features are required, choose API Gateway REST API.",
           "Otherwise choose API Gateway HTTP API.",
           "If execution is short-lived and packaging is function/source_only, prefer Lambda.",
@@ -447,6 +503,7 @@
       "if": { "workload.app_type": ["web_app", "internal_app"] },
       "then": {
         "decision_tree": [
+          "If orchestration preference is kubernetes_native, choose EKS with ALB.",
           "If packaging is container, choose ECS Fargate plus ALB.",
           "If packaging is vm, choose EC2 plus ASG plus ALB.",
           "Use Lambda only when the workload is actually an API/event surface rather than a conventional web tier."
@@ -470,6 +527,8 @@
     ],
     "recommended_modules": [
       "network",
+      "eks_cluster",
+      "eks_node_groups",
       "api_ingress",
       "ecs_service",
       "lambda_api",

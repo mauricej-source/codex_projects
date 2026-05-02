@@ -125,9 +125,10 @@
     return uniqueMainNumbers.sort((a, b) => a - b);
   }
 
-  function buildTicket(categories, strategyKey) {
+  function buildTicket(categories, strategyKey, options = {}) {
     const strategyConfig = STRATEGY_CONFIGS[strategyKey] || STRATEGY_CONFIGS.balanced;
     const powerballWarm = categories.powerball.warm;
+    const maxSum = options.maxSum ?? 200;
 
     if (powerballWarm.length < 1) {
       return null;
@@ -142,7 +143,7 @@
     const evenCount = sorted.length - oddCount;
     const total = sorted.reduce((sum, value) => sum + value, 0);
     const ratioValid = (oddCount === 3 && evenCount === 2) || (oddCount === 2 && evenCount === 3);
-    const sumValid = total >= 130 && total <= 200;
+    const sumValid = total >= 130 && total <= maxSum;
 
     if (!ratioValid || !sumValid) {
       return null;
@@ -168,7 +169,7 @@
     return plan;
   }
 
-  function generateTickets(categories, requestedCount, strategyKey) {
+  function generateTickets(categories, requestedCount, strategyKey, options = {}) {
     const tickets = [];
     const usedKeys = new Set();
     const strategyPlan = strategyKey === "mix"
@@ -180,7 +181,7 @@
       const maxAttempts = 600;
 
       while (attempts < maxAttempts) {
-        const ticket = buildTicket(categories, strategyKey);
+        const ticket = buildTicket(categories, strategyKey, options);
         attempts += 1;
 
         if (!ticket) {
@@ -205,7 +206,7 @@
 
       while (tickets.length < requestedCount && attempts < maxAttempts) {
         const strategyKey = fallbackStrategies[attempts % fallbackStrategies.length];
-        const ticket = buildTicket(categories, strategyKey);
+        const ticket = buildTicket(categories, strategyKey, options);
         attempts += 1;
 
         if (!ticket) {

@@ -4,9 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Lottery Gap Strategy Dashboard</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+  <link rel="stylesheet" href="./styles/app.css">
+  <script src="./vendor/chart.umd.min.js"></script>
+  <script src="./vendor/xlsx.full.min.js"></script>
 </head>
 <body class="min-h-screen bg-slate-950 text-slate-100">
   <div class="fixed inset-0 -z-10 bg-slate-950"></div>
@@ -62,8 +62,8 @@
         <div id="upload-panel-body" class="space-y-5">
           <div class="grid gap-3 lg:grid-cols-[60%_40%]">
             <div class="space-y-5">
-              <div class="grid gap-3 xl:grid-cols-[minmax(0,1.2fr)_11rem_14rem]">
-                <div>
+              <div class="flex flex-nowrap items-end gap-3">
+                <div class="min-w-0 flex-1">
                   <label for="csv-file" class="mb-2 block text-sm font-medium text-emerald-300">Upload Data File</label>
                   <input
                     id="csv-file"
@@ -72,8 +72,8 @@
                     class="block h-[3.5rem] w-full rounded-2xl border border-slate-700 bg-slate-950/80 px-4 py-3 text-sm text-slate-300 file:mr-4 file:rounded-full file:border-0 file:bg-emerald-500/15 file:px-4 file:py-2 file:text-sm file:font-medium file:text-emerald-300 hover:file:bg-emerald-500/25"
                   >
                 </div>
-                <div>
-                  <label for="ticket-count" class="mb-2 block text-sm font-medium text-emerald-300">Number of Tickets</label>
+                <div class="shrink-0" style="width: 9rem;">
+                  <label for="ticket-count" class="mb-2 block text-sm font-medium text-emerald-300"># of Tickets</label>
                   <input
                     id="ticket-count"
                     type="number"
@@ -83,7 +83,17 @@
                     class="w-full rounded-2xl border border-slate-700 bg-slate-900 px-4 py-3 text-sm text-slate-100 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/30"
                   >
                 </div>
-                <div>
+                <div class="shrink-0" style="width: 9rem;">
+                  <label for="sum-limit" class="mb-2 block text-sm font-medium text-emerald-300">Sum</label>
+                  <input
+                    id="sum-limit"
+                    type="number"
+                    min="130"
+                    value="200"
+                    class="w-full rounded-2xl border border-slate-700 bg-slate-900 px-4 py-3 text-sm text-slate-100 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/30"
+                  >
+                </div>
+                <div class="shrink-0" style="width: 12.5rem;">
                   <label for="strategy-mode" class="mb-2 block text-sm font-medium text-emerald-300">Strategy Mode</label>
                   <select
                     id="strategy-mode"
@@ -167,7 +177,7 @@
                   </table>
                 </div>
                 <p class="mt-3 leading-6">
-                  All tickets must pass a 3:2 or 2:3 odd/even split and total 130-200. Powerballs use the middle "Warm" probability band.
+                  All tickets must pass a 3:2 or 2:3 odd/even split and total 130 through the configured Sum value. Powerballs use the middle "Warm" probability band.
                 </p>
               </div>
             </div>
@@ -316,7 +326,7 @@
                 <p class="text-xs uppercase tracking-[0.22em] text-slate-500">Draw History</p>
               </div>
               <div class="flex items-center gap-3">
-                <span class="text-xs text-slate-500">Strategy, date, and balls</span>
+                <span class="text-xs text-slate-500">Strategy, date, balls, and sum</span>
                 <select
                   id="draw-history-filter"
                   class="rounded-xl border border-slate-700 bg-slate-900 px-3 py-2 text-xs text-slate-200 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/30"
@@ -346,6 +356,7 @@
                     <th class="px-4 py-3 text-left font-medium">Strategy</th>
                     <th class="px-4 py-3 text-left font-medium">Date</th>
                     <th class="px-4 py-3 text-left font-medium">Ball Numbers</th>
+                    <th class="px-4 py-3 text-left font-medium">Sum</th>
                   </tr>
                 </thead>
                 <tbody id="draw-history-table" class="divide-y divide-slate-800 bg-slate-900/60"></tbody>

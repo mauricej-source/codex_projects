@@ -5,6 +5,7 @@
       csvInput: document.getElementById("csv-input"),
       processBtn: document.getElementById("process-btn"),
       ticketCount: document.getElementById("ticket-count"),
+      sumLimit: document.getElementById("sum-limit"),
       strategyMode: document.getElementById("strategy-mode"),
       drawCount: document.getElementById("draw-count"),
       statusPill: document.getElementById("status-pill"),
@@ -48,7 +49,7 @@
     `;
     elements.mainOverdueTable.innerHTML = buildEmptyRows("No overdue data available.", 2);
     elements.powerballOverdueTable.innerHTML = buildEmptyRows("No overdue data available.", 2);
-    elements.drawHistoryTable.innerHTML = buildEmptyRows("No draw history available.", 3);
+    elements.drawHistoryTable.innerHTML = buildEmptyRows("No draw history available.", 4);
     if (elements.drawHistoryFilter) {
       elements.drawHistoryFilter.value = "all";
     }
@@ -194,7 +195,7 @@
 
   function renderDrawHistory(elements, rows, categories) {
     if (!rows.length) {
-      elements.drawHistoryTable.innerHTML = buildEmptyRows("No draw history available.", 3);
+      elements.drawHistoryTable.innerHTML = buildEmptyRows("No draw history available.", 4);
       return;
     }
 
@@ -208,12 +209,13 @@
       : classifiedRows.filter((item) => item.classification.strategy === selectedStrategy);
 
     if (!filteredRows.length) {
-      elements.drawHistoryTable.innerHTML = buildEmptyRows("No draw history rows match the selected strategy.", 3);
+      elements.drawHistoryTable.innerHTML = buildEmptyRows("No draw history rows match the selected strategy.", 4);
       return;
     }
 
     elements.drawHistoryTable.innerHTML = filteredRows.map(({ row, classification }) => {
       const ballNumbers = `${row.mainBalls.join(", ")} | PB ${row.powerball}`;
+      const ballSum = row.mainBalls.reduce((sum, value) => sum + value, 0);
 
       return `
         <tr>
@@ -223,6 +225,7 @@
           </td>
           <td class="px-4 py-3 text-slate-200">${row.date}</td>
           <td class="px-4 py-3 text-slate-300">${ballNumbers}</td>
+          <td class="px-4 py-3 text-slate-200">${ballSum}</td>
         </tr>
       `;
     }).join("");

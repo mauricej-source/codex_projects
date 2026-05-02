@@ -10,9 +10,15 @@
     return elements.strategyMode.value || "mix";
   }
 
+  function getMaxSum() {
+    return Math.max(130, Number(elements.sumLimit.value) || 200);
+  }
+
   function rebuildTickets() {
     const requestedCount = getRequestedTicketCount();
-    const tickets = window.PowerballTickets.generateTickets(state.categories, requestedCount, getStrategyMode());
+    const tickets = window.PowerballTickets.generateTickets(state.categories, requestedCount, getStrategyMode(), {
+      maxSum: getMaxSum()
+    });
     window.PowerballUI.renderTickets(elements, tickets, requestedCount);
   }
 
@@ -31,7 +37,9 @@
       window.PowerballCalculations.updateDerivedState(state, rows);
 
       const requestedCount = getRequestedTicketCount();
-      const tickets = window.PowerballTickets.generateTickets(state.categories, requestedCount, getStrategyMode());
+      const tickets = window.PowerballTickets.generateTickets(state.categories, requestedCount, getStrategyMode(), {
+        maxSum: getMaxSum()
+      });
 
       window.PowerballUI.renderDashboard(elements, state, tickets, requestedCount);
       window.PowerballUI.setFeedback(elements, `Processed ${rows.length} draws. Gap, overdue, ticket, and frequency views are now live.`, "success");
@@ -126,6 +134,7 @@
     elements.csvInput.addEventListener("paste", handlePaste);
     elements.processBtn.addEventListener("click", () => processData());
     elements.ticketCount.addEventListener("change", handleTicketCountChange);
+    elements.sumLimit.addEventListener("change", handleTicketCountChange);
     elements.strategyMode.addEventListener("change", handleTicketCountChange);
     if (elements.drawHistoryFilter) {
       elements.drawHistoryFilter.addEventListener("change", () => {

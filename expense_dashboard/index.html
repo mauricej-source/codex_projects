@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Financial Expense Dashboard</title>
+    <link rel="stylesheet" href="./styles.css" />
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.8/dist/chart.umd.min.js"></script>
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+  </head>
+  <body>
+    <main class="app-shell">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">Financial Workspace</p>
+          <h1>Expense Dashboard</h1>
+        </div>
+        <div class="status-pill" id="fileStatus">
+          <i data-lucide="file-spreadsheet"></i>
+          <span>No file loaded</span>
+        </div>
+      </header>
+
+      <section class="upload-zone" id="dropZone" aria-label="Upload expense file">
+        <input id="fileInput" type="file" accept=".xlsx,.xls,.csv" />
+        <div class="upload-graphic" aria-hidden="true">
+          <i data-lucide="cloud-upload"></i>
+        </div>
+        <div>
+          <h2>Drop an expense workbook here</h2>
+          <p>Accepts .xlsx or .csv files with Date, Category, Vendor, Subtotal, Tax, Total, Gratuity, and Receipt Link headers.</p>
+        </div>
+        <div class="upload-actions">
+          <button class="primary-button" id="browseButton" type="button">
+            <i data-lucide="folder-open"></i>
+            Browse
+          </button>
+          <button class="ghost-button" id="sampleButton" type="button">
+            <i data-lucide="play-circle"></i>
+            Load sample
+          </button>
+        </div>
+      </section>
+
+      <section class="dashboard hidden" id="dashboard">
+        <div class="filter-bar">
+          <div class="segmented" aria-label="Breakdown view">
+            <button class="segment active" data-grain="year">Yearly</button>
+            <button class="segment" data-grain="quarter">Quarterly</button>
+            <button class="segment" data-grain="month">Monthly</button>
+            <button class="segment" data-grain="week">Weekly</button>
+          </div>
+          <label class="select-field">
+            <span>Period</span>
+            <select id="periodSelect"></select>
+          </label>
+          <label class="search-field">
+            <i data-lucide="search"></i>
+            <input id="searchInput" type="search" placeholder="Search vendor or category" />
+          </label>
+        </div>
+
+        <section class="kpi-grid" aria-label="Expense summary">
+          <div class="kpi">
+            <span>Total Spend</span>
+            <strong id="kpiTotal">$0.00</strong>
+          </div>
+          <div class="kpi">
+            <span>Transactions</span>
+            <strong id="kpiCount">0</strong>
+          </div>
+          <div class="kpi">
+            <span>Average Spend Per Trans</span>
+            <strong id="kpiAverage">$0.00</strong>
+          </div>
+          <div class="kpi">
+            <span>Top Category</span>
+            <strong id="kpiCategory">-</strong>
+          </div>
+        </section>
+
+        <section class="visual-layout">
+          <div class="chart-panel">
+            <div class="panel-heading">
+              <div>
+                <p class="eyebrow">Category Mix</p>
+                <h2>Total Spend by Category</h2>
+              </div>
+              <i data-lucide="pie-chart"></i>
+            </div>
+            <div class="chart-wrap">
+              <canvas id="expenseChart"></canvas>
+            </div>
+          </div>
+
+          <aside class="detail-panel" id="detailPanel">
+            <p class="eyebrow">Hover Detail</p>
+            <h2 id="detailTitle">Select a slice</h2>
+            <p id="detailPercent">Hover over the pie chart to see the vendor breakdown for that category.</p>
+            <div id="vendorBreakdown" class="vendor-list"></div>
+            <div id="detailTotal" class="detail-total hidden"></div>
+          </aside>
+        </section>
+
+        <section class="table-panel">
+          <div class="panel-heading">
+            <div>
+              <p class="eyebrow">Line Items</p>
+              <h2>Filtered Transactions</h2>
+            </div>
+            <span id="rowCount">0 rows</span>
+          </div>
+          <div class="table-scroll">
+            <table>
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Category</th>
+                  <th>Vendor</th>
+                  <th>Subtotal</th>
+                  <th>Tax</th>
+                  <th>Gratuity</th>
+                  <th>Total</th>
+                  <th>Receipt</th>
+                </tr>
+              </thead>
+              <tbody id="expenseRows"></tbody>
+              <tfoot>
+                <tr>
+                  <td colspan="6">Grand Total</td>
+                  <td id="grandTotal">$0.00</td>
+                  <td></td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        </section>
+      </section>
+    </main>
+
+    <script src="./app.js"></script>
+  </body>
+</html>

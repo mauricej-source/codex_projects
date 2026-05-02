@@ -277,6 +277,7 @@ select option {
 .kpi,
 .chart-panel,
 .detail-panel,
+.comparison-panel,
 .table-panel {
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -342,6 +343,13 @@ select option {
   color: var(--muted);
 }
 
+.panel-note {
+  margin-top: 6px;
+  color: var(--muted);
+  font-size: 0.86rem;
+  line-height: 1.4;
+}
+
 .chart-wrap {
   position: relative;
   height: 390px;
@@ -391,6 +399,92 @@ select option {
 
 .detail-total span,
 .detail-total strong {
+  font-weight: 900;
+}
+
+.comparison-panel {
+  margin-bottom: 18px;
+  padding: 18px;
+}
+
+.comparison-heading {
+  align-items: flex-start;
+}
+
+.comparison-controls {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.comparison-controls .select-field {
+  min-width: 230px;
+}
+
+.comparison-body {
+  display: block;
+}
+
+.comparison-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.comparison-summary > div {
+  min-width: 0;
+  padding: 14px;
+  border: 1px solid rgba(159, 178, 200, 0.16);
+  border-radius: 8px;
+  background: rgba(16, 36, 61, 0.66);
+}
+
+.comparison-summary span {
+  display: block;
+  overflow: hidden;
+  margin-bottom: 8px;
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 800;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.comparison-summary strong {
+  display: block;
+  overflow: hidden;
+  font-size: 1.25rem;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.comparison-table-wrap {
+  overflow: auto;
+  max-height: 320px;
+  border: 1px solid rgba(159, 178, 200, 0.15);
+  border-radius: 8px;
+}
+
+.comparison-table {
+  min-width: 760px;
+}
+
+.comparison-table th:nth-child(n + 2),
+.comparison-table td:nth-child(n + 2) {
+  text-align: right;
+}
+
+.delta-up {
+  color: #ff9a9a;
+  font-weight: 900;
+}
+
+.delta-down {
+  color: #75e0aa;
   font-weight: 900;
 }
 
@@ -483,6 +577,19 @@ svg {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .comparison-heading {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .comparison-controls {
+    justify-content: stretch;
+  }
+
+  .comparison-controls .select-field {
+    flex: 1 1 240px;
+  }
+
   .chart-wrap {
     height: 320px;
   }
@@ -495,7 +602,8 @@ svg {
 
 @media (max-width: 560px) {
   .segmented,
-  .kpi-grid {
+  .kpi-grid,
+  .comparison-summary {
     grid-template-columns: 1fr;
   }
 

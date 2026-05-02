@@ -103,6 +103,58 @@
           </aside>
         </section>
 
+        <section class="comparison-panel">
+          <div class="panel-heading comparison-heading">
+            <div>
+              <p class="eyebrow">Month Comparison</p>
+              <h2>Expense Differences by Category</h2>
+              <p class="panel-note">Red means spending increased versus the baseline month. Green means spending decreased.</p>
+            </div>
+            <div class="comparison-controls">
+              <label class="select-field">
+                <span>Compare</span>
+                <select id="compareMonthA"></select>
+              </label>
+              <label class="select-field">
+                <span>Baseline Month</span>
+                <select id="compareMonthB"></select>
+              </label>
+            </div>
+          </div>
+
+          <div id="comparisonBody" class="comparison-body">
+            <div class="comparison-summary">
+              <div>
+                <span id="compareALabel">Selected Month</span>
+                <strong id="compareATotal">$0.00</strong>
+              </div>
+              <div>
+                <span id="compareBLabel">Baseline Month</span>
+                <strong id="compareBTotal">$0.00</strong>
+              </div>
+              <div>
+                <span>Difference</span>
+                <strong id="compareDelta">$0.00</strong>
+              </div>
+            </div>
+
+            <div class="comparison-table-wrap">
+              <table class="comparison-table">
+                <thead>
+                  <tr>
+                    <th>Category</th>
+                    <th id="compareAHeader">Selected</th>
+                    <th id="compareBHeader">Baseline</th>
+                    <th>Difference</th>
+                    <th>Change</th>
+                  </tr>
+                </thead>
+                <tbody id="comparisonRows"></tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
         <section class="table-panel">
           <div class="panel-heading">
             <div>

@@ -9,6 +9,8 @@ const state = {
   period: "all",
   query: "",
   chart: null,
+  compareA: "",
+  compareB: "",
 };
 
 const els = {
@@ -31,6 +33,16 @@ const els = {
   detailPercent: document.getElementById("detailPercent"),
   vendorBreakdown: document.getElementById("vendorBreakdown"),
   detailTotal: document.getElementById("detailTotal"),
+  compareMonthA: document.getElementById("compareMonthA"),
+  compareMonthB: document.getElementById("compareMonthB"),
+  compareALabel: document.getElementById("compareALabel"),
+  compareBLabel: document.getElementById("compareBLabel"),
+  compareATotal: document.getElementById("compareATotal"),
+  compareBTotal: document.getElementById("compareBTotal"),
+  compareDelta: document.getElementById("compareDelta"),
+  compareAHeader: document.getElementById("compareAHeader"),
+  compareBHeader: document.getElementById("compareBHeader"),
+  comparisonRows: document.getElementById("comparisonRows"),
 };
 
 const palette = [
@@ -99,6 +111,16 @@ function periodLabel(key) {
   return key;
 }
 
+function monthKey(row) {
+  return periodKey(row, "month");
+}
+
+function monthLabel(key) {
+  const [year, month] = key.split("-").map(Number);
+  if (!year || !month) return key;
+  return new Date(year, month - 1, 1).toLocaleDateString("en-US", { month: "long", year: "numeric" });
+}
+
 function parseWorkbook(workbook) {
   const sheet = workbook.Sheets[workbook.SheetNames[0]];
   const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, raw: true, defval: "" });
@@ -154,6 +176,7 @@ function loadRows(rows, filename) {
   els.fileStatus.querySelector("span").textContent = `${filename} - ${rows.length.toLocaleString()} rows`;
   els.dashboard.classList.remove("hidden");
   populatePeriods();
+  populateComparisonMonths();
   render();
 }
 
@@ -163,6 +186,17 @@ function populatePeriods() {
     `<option value="${key}">${periodLabel(key)}</option>`
   )).join("");
   els.periodSelect.value = state.period;
+}
+
+function populateComparisonMonths() {
+  const months = [...new Set(state.rows.map(monthKey))].sort((a, b) => periodSortValue(b) - periodSortValue(a));
+  const options = months.map((key) => `<option value="${key}">${monthLabel(key)}</option>`).join("");
+  els.compareMonthA.innerHTML = options;
+  els.compareMonthB.innerHTML = options;
+  state.compareA = months[0] || "";
+  state.compareB = months[1] || months[0] || "";
+  els.compareMonthA.value = state.compareA;
+  els.compareMonthB.value = state.compareB;
 }
 
 function applyFilters() {
@@ -195,6 +229,7 @@ function render() {
   renderKpis();
   renderTable();
   renderChart();
+  renderComparison();
   resetDetail();
   if (window.lucide) window.lucide.createIcons();
 }
@@ -274,6 +309,72 @@ function renderChart() {
       },
     },
   });
+}
+
+function totalRows(rows) {
+  return rows.reduce((sum, row) => sum + row.total, 0);
+}
+
+function categoryTotals(rows) {
+  const map = new Map();
+  rows.forEach((row) => {
+    map.set(row.category, (map.get(row.category) || 0) + row.total);
+  });
+  return map;
+}
+
+function renderComparison() {
+  if (!state.compareA || !state.compareB) {
+    els.comparisonRows.innerHTML = `<tr><td class="empty-row" colspan="5">Load a workbook with dated transactions to compare months.</td></tr>`;
+    return;
+  }
+
+  const rowsA = state.rows.filter((row) => monthKey(row) === state.compareA);
+  const rowsB = state.rows.filter((row) => monthKey(row) === state.compareB);
+  const totalA = totalRows(rowsA);
+  const totalB = totalRows(rowsB);
+  const delta = totalA - totalB;
+  const labelA = monthLabel(state.compareA);
+  const labelB = monthLabel(state.compareB);
+  const totalsA = categoryTotals(rowsA);
+  const totalsB = categoryTotals(rowsB);
+  const categories = [...new Set([...totalsA.keys(), ...totalsB.keys()])];
+
+  els.compareALabel.textContent = labelA;
+  els.compareBLabel.textContent = labelB;
+  els.compareATotal.textContent = currency.format(totalA);
+  els.compareBTotal.textContent = currency.format(totalB);
+  els.compareDelta.textContent = `${delta >= 0 ? "+" : ""}${currency.format(delta)}`;
+  els.compareDelta.classList.toggle("delta-up", delta > 0);
+  els.compareDelta.classList.toggle("delta-down", delta < 0);
+  els.compareAHeader.textContent = labelA;
+  els.compareBHeader.textContent = labelB;
+
+  const comparison = categories.map((category) => {
+    const valueA = totalsA.get(category) || 0;
+    const valueB = totalsB.get(category) || 0;
+    const change = valueB ? ((valueA - valueB) / valueB) * 100 : valueA ? 100 : 0;
+    return { category, valueA, valueB, difference: valueA - valueB, change };
+  }).sort((a, b) => b.difference - a.difference);
+
+  if (!comparison.length) {
+    els.comparisonRows.innerHTML = `<tr><td class="empty-row" colspan="5">No expenses found for the selected months.</td></tr>`;
+    return;
+  }
+
+  els.comparisonRows.innerHTML = comparison.map((row) => `
+    <tr>
+      <td>${escapeHtml(row.category)}</td>
+      <td>${currency.format(row.valueA)}</td>
+      <td>${currency.format(row.valueB)}</td>
+      <td class="${row.difference > 0 ? "delta-up" : row.difference < 0 ? "delta-down" : ""}">
+        ${row.difference >= 0 ? "+" : ""}${currency.format(row.difference)}
+      </td>
+      <td class="${row.change > 0 ? "delta-up" : row.change < 0 ? "delta-down" : ""}">
+        ${row.change >= 0 ? "+" : ""}${row.change.toFixed(1)}%
+      </td>
+    </tr>
+  `).join("");
 }
 
 function renderDetail(category, amount) {
@@ -358,6 +459,16 @@ document.querySelectorAll(".segment").forEach((button) => {
 els.periodSelect.addEventListener("change", () => {
   state.period = els.periodSelect.value;
   render();
+});
+
+els.compareMonthA.addEventListener("change", () => {
+  state.compareA = els.compareMonthA.value;
+  renderComparison();
+});
+
+els.compareMonthB.addEventListener("change", () => {
+  state.compareB = els.compareMonthB.value;
+  renderComparison();
 });
 
 els.searchInput.addEventListener("input", () => {

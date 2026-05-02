@@ -27,11 +27,14 @@ Once a file is loaded, the dashboard displays:
 - A search field for filtering by vendor or category.
 - A pie chart that aggregates total spend by category.
 - A hover detail panel for pie-chart slices, including vendor breakdown and an overall total when multiple vendors exist.
+- A month comparison panel for selecting two months and reviewing category-level spending differences.
 - A striped transaction table with a dynamic grand total row.
 
 ![Expense Dashboard Screenshot](./Expense_DashBoard_Screenshot.png)
 
 The dashboard updates dynamically as users change the period filter or search input. The chart, KPIs, hover panel, table rows, and grand total all reflect the active filtered data.
+
+The month comparison panel lets users choose a comparison month and a baseline month. It displays the total spend for each month, the overall difference, and a category table sorted by spending increase so users can quickly identify where expenses rose.
 
 ## Project Stack of Technology
 
@@ -69,4 +72,4 @@ The app can also be opened directly from `index.html`, but running it through a 
 - `input/ExpenseTracker.xlsx` - Sample workbook used to validate parsing, filtering, totals, and chart behavior.
 - `index.html` - Main page structure and dashboard markup.
 - `styles.css` - Responsive layout, visual styling, and panel behavior.
-- `app.js` - File parsing, date grouping, filtering, KPI calculations, chart rendering, table rendering, and hover detail logic.
+- `app.js` - File parsing, date grouping, filtering, KPI calculations, chart rendering, month comparison, table rendering, and hover detail logic.

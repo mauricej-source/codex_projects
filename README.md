@@ -9,7 +9,7 @@ Projects as they have been Created:
 4.  Florida Energy Consumption
 5.  Job Description - Technical Assessment Generator
 6.  Lottery Gap Strategy Dashboard
-7.  Terraform Generator
-8.  Expense Dashboard
+7.  Expense Dashboard
+8.  AWS Infrastructure Decision Utility
 9.  
 10. 

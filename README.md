@@ -11,5 +11,5 @@ Projects as they have been Created:
 6.  Lottery Gap Strategy Dashboard
 7.  Expense Dashboard
 8.  AWS Infrastructure Decision Utility
-9.  Personal Options Trading Suite - Charles Schwab
+9.  Individual Options Trading Suite - Charles Schwab
 10. 

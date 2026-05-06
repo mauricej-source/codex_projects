@@ -1,0 +1,108 @@
+Act as a Senior Fintech Engineer. Create a Python application using Streamlit and the 'schwab-py' library to build a professional Options Trading Suite.  
+
+### Core Requirements:
+1. **Authentication Configuration**: 
+   - Create a 'Configuration' sidebar or tab.
+   - Include input fields for: App Key, App Secret, Callback URL, and Token Path.
+   - Implement a secure OAuth2 flow using `schwab.auth` to handle initial login and automatic token refreshing.
+   
+2. **Automated Strategy Discovery Engine**
+   Instead of just manual ticker entry, implement a "Discovery Mode":
+   - **Pre-set Universe**: Maintain a list of the top 100 most liquid symbols (ETFs like SPY, QQQ, IWM and high-volume equities like AAPL, TSLA, NVDA).
+   - **Scanning Logic**: 
+      1. Fetch 'Quotes' for the universe to calculate IV Rank.
+      2. Filter for the top 20 symbols with the highest IV Rank (to maximize premium).
+      3. For those top 20, fetch the full 'Option Chains'.
+   - **The "Top Lists"**: Display the "Top 5, 10, 15, and 20" best potential trades across all strategies, ranked by your 'Mathematical Logic (Math Engine)'.
+       this can be a dropdown or textbox with an incrementer widget.
+
+   - **Mathematical Logic (Math Engine)**
+       Incorporate the following formulas in the 'engine.py' module:
+   
+       - **Probability of Profit (POP)**:
+         - For Credit Spreads: Use `(1 - (Short Delta * 1.1))` as a conservative estimate of expiration probability.
+         - For Debit Spreads: Use `(Long Delta - Short Delta)` to estimate directional success.
+       
+       - **Expected Value (EV)**:
+         - Formula: `(POP * Max_Profit) - ((1 - POP) * Max_Loss)`
+         - A trade is only 'HIGH' if the EV is positive (> 0).
+       
+       - **IV Rank Calculation**:
+         - `(Current_IV - 52_Week_Low_IV) / (52_Week_High_IV - 52_Week_Low_IV) * 100`
+         - High success requires IV Rank > 50 (selling when fear is expensive).
+       
+       - **Capital Efficiency (for <$25k accounts)**:
+         - `(EV / Buying_Power_Required) * 100`. 
+         - Rank trades higher if they offer a better return on the specific collateral held by Schwab.
+  
+
+3. **Options Strategy Screener: Strategic Options Screener (Segmented by Account Value)**
+    - Create a logic engine that fetches 'Option Chains' for a list of tickers (e.g., SPY, QQQ, AAPL).
+	- This list of tickers can be manual entry by the end user, default to (e.g., SPY, QQQ, AAPL) when the application is refreshed or first starts up.
+	- Provide a Screener Button to replace the list of tickers with the 'Automated Strategy Discovery Engine' Results from above and refresh the screen based upon this new list
+	- End User should be able to toggle between what the screener finds and manual entry.  An Open Textbox or TextArea should be sufficient for now.
+	- The UI must allow the user to toggle between "Standard Account (+$25k)" and "Swing Account (<$25k)".
+
+    A. Strategy Filters:
+       - **For +$25k Accounts**: Bull Put Spreads, Bear Call Spreads, Iron Condors, and The Wheel (Cash-Secured Puts).
+       - **For <$25k Accounts**: 30-45 Day Credit Spreads, Swing-Trading Debit Spreads, and Poor Man’s Covered Calls (Diagonals).
+
+    B. Ranking Logic (User-Adjustable Defaults):  Implement a logic engine that ranks trades as HIGH, MEDIUM, or LOW success based on the following:
+
+       Standard (+$25k) Logic:**
+       - HIGH: POP > 70%, Delta < 0.20, IV Rank > 50%.
+       - MEDIUM: POP 50-70%, Delta 0.20-0.40, IV Rank 30-50%.
+       - LOW: POP < 50% or directional bets with low IV.
+     
+       Swing (<$25k) Logic:**
+       - HIGH: Theta/Daily Decay > 1% of trade cost, Delta < 0.25 (for credits), Reward-to-Risk > 1:3.
+       - MEDIUM: POP 50-65%, 7-14 Days to Expiration, IV Rank 20-40%.
+       - LOW: High Gamma risk (expiring in <3 days) or Debit spreads with <40% POP.
+
+4. **Transaction Logger**:
+   - Create a 'Trade Log' module that saves trade details to a local SQLite database or CSV.
+   - Fields:
+     - Trade Meta: Date/Time, Ticker, Strategy, Strikes, Account Segment (Standard/Swing), and Trade Type (Live/Paper).
+     - Financials: Net Credit/Debit, Commission, and Status (Open/Closed/Expired).
+     - The Greeks at Entry: Delta (Directional Risk), Theta (Time Decay), and Gamma (Acceleration Risk).
+     - Volatility Context: IV Rank and Implied Volatility (IV) of the chain at entry.
+     - Performance Tracking: Include a field for 'Exit Price' and 'Closing Greeks' to calculate the "Alpha" (the edge) of your screener logic.
+   
+   - Paper Trade Toggle: Add a "Paper Trade" checkbox in the Screener. If checked, the 'Stage Order' button should only save the trade to the SQLite database with a status='PAPER' and the current entry prices, without sending an actual order to Schwab.
+
+   - Backtest Utility: Create a function that compares the 'Entry Price' in the log to the 'Current Price' in the live feed to calculate a "Theoretical P/L" for these paper trades.
+
+5. **Portfolio Dashboard**:
+   - Fetch live account balances and positions using the Schwab 'Accounts' endpoint.
+   - Display a summary table of current holdings, including P/L Open and Days to Expiration (DTE).
+   - Gamma/Gap Risk Alert: Implement a monitor that triggers a high-visibility warning (e.g., st.error or st.toast) if any open position reaches <= 2 Days to Expiration (DTE).
+   - Console Logging: Ensure these alerts are also sent to the system log/console to maintain an audit trail of high-risk periods.
+
+6. **Comprehensive Help & Documentation Page**:
+   - Create a dedicated "Help/Docs" page within the Streamlit app.
+   - **Sections to include**:
+     - **App Overview**: Explain the tool acts as a "Swing Trading" screener to avoid PDT rules.
+     - **Component Guide**: Explain the Config, Screener, and Logger pages.
+     - **Definitions**: Define Delta (directional risk), Theta (daily decay), IV Rank (volatility context), and POP (Probability of Profit).
+     - **User Guide**: Instructions on how to adjust filters and interpret the Success Ratings.
+	 
+
+### Technical Stack & Instructions:
+- **Language**: Python 3.10+
+- **Key Libraries**: Streamlit, schwab-py, Pandas, SQLite3.
+- **Storage: SQLite (for the trade log)
+- **UI**: Dark mode theme. Use 'st.expander' for advanced settings to keep the UI clean.
+
+- Ensure the code is modular: separate the API logic, the Mathematical Logic, the Ranking Logic, and the UI components.
+
+- Handle API rate limits and connection errors gracefully with try-except blocks.
+
+- **Error Handling**: Implement robust logging for API connection errors and rate limiting.
+
+- **OSI Formatting: Implement a helper function in schwab_client.py to translate human-readable strikes (e.g., "SPY 450 Call 05/15/26") into the 21-character Schwab OSI format required for API calls.
+
+- **State Management: Use st.session_state to store the authenticated schwab-py client and the results of the "Discovery Engine." This ensures that switching between the Screener and the Help Page doesn't trigger a new API scan or a re-login.
+
+- **Order Construction (Drafting): In the 'Trade Log' or 'Portfolio' view, include a "Stage Order" button for identified spreads. This should use the schwab.orders.options.OptionSymbol and OrderBuilder to prepare a multi-leg JSON object for the Schwab /orders endpoint, ensuring the correct instruction (e.g., 'SELL_TO_OPEN' vs 'BUY_TO_OPEN') for each leg.
+
+- **Data Pagination: When fetching 'Option Chains' for the Top 20, ensure the logic handles the strikeCount and strategy parameters in the Schwab API to minimize unnecessary data transfer.

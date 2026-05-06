@@ -7,6 +7,7 @@ from typing import Any
 
 import pandas as pd
 
+from .api_config import DEFAULT_API_CONFIG, SchwabApiConfig
 from .schwab_client import get_accounts
 
 
@@ -61,8 +62,11 @@ def account_summary(accounts: list[dict[str, Any]]) -> tuple[pd.DataFrame, pd.Da
     return pd.DataFrame(balance_rows), pd.DataFrame(position_rows)
 
 
-def fetch_portfolio(client: Any) -> tuple[pd.DataFrame, pd.DataFrame]:
-    accounts = get_accounts(client, fields="positions")
+def fetch_portfolio(
+    client: Any,
+    api_config: SchwabApiConfig = DEFAULT_API_CONFIG,
+) -> tuple[pd.DataFrame, pd.DataFrame]:
+    accounts = get_accounts(client, fields=api_config.account_fields, api_config=api_config)
     return account_summary(accounts)
 
 

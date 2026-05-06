@@ -9,6 +9,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Iterable
 
+from .api_config import DEFAULT_API_CONFIG, SchwabApiConfig
+
 
 logger = logging.getLogger("options_suite.schwab")
 
@@ -77,11 +79,18 @@ def safe_api_call(label: str, func: Any, *args: Any, **kwargs: Any) -> Any:
         return None
 
 
-def get_quotes(client: Any, symbols: Iterable[str]) -> dict[str, Any]:
+def _client_method(client: Any, method_name: str) -> Any:
+    method = getattr(client, method_name, None)
+    if method is None:
+        raise AttributeError(f"Schwab client does not expose method '{method_name}'. Update API configuration.")
+    return method
+
+
+def get_quotes(client: Any, symbols: Iterable[str], api_config: SchwabApiConfig = DEFAULT_API_CONFIG) -> dict[str, Any]:
     symbols = [s.strip().upper() for s in symbols if s.strip()]
     if not symbols:
         return {}
-    data = safe_api_call("get_quotes", client.get_quotes, symbols)
+    data = safe_api_call(api_config.quotes_method, _client_method(client, api_config.quotes_method), symbols)
     return data or {}
 
 
@@ -92,34 +101,50 @@ def get_option_chain(
     strike_count: int = 12,
     from_date: dt.date | None = None,
     to_date: dt.date | None = None,
-    strategy: str = "SINGLE",
-    include_underlying_quote: bool = True,
+    strategy: str | None = None,
+    include_underlying_quote: bool | None = None,
+    api_config: SchwabApiConfig = DEFAULT_API_CONFIG,
 ) -> dict[str, Any]:
     kwargs = {
         "strike_count": strike_count,
-        "strategy": strategy,
-        "include_underlying_quote": include_underlying_quote,
+        "strategy": strategy or api_config.option_chain_strategy,
+        "include_underlying_quote": (
+            api_config.include_underlying_quote if include_underlying_quote is None else include_underlying_quote
+        ),
     }
     if from_date:
         kwargs["from_date"] = from_date
     if to_date:
         kwargs["to_date"] = to_date
-    data = safe_api_call("get_option_chain", client.get_option_chain, symbol.upper(), **kwargs)
+    method = _client_method(client, api_config.option_chain_method)
+    data = safe_api_call(api_config.option_chain_method, method, symbol.upper(), **kwargs)
     return data or {}
 
 
-def get_linked_accounts(client: Any) -> list[dict[str, Any]]:
-    data = safe_api_call("get_linked_accounts", client.get_account_numbers)
+def get_linked_accounts(client: Any, api_config: SchwabApiConfig = DEFAULT_API_CONFIG) -> list[dict[str, Any]]:
+    method = _client_method(client, api_config.account_numbers_method)
+    data = safe_api_call(api_config.account_numbers_method, method)
     return data or []
 
 
-def get_account(client: Any, account_hash: str, fields: str = "positions") -> dict[str, Any]:
-    data = safe_api_call("get_account", client.get_account, account_hash, fields=fields)
+def get_account(
+    client: Any,
+    account_hash: str,
+    fields: str | None = None,
+    api_config: SchwabApiConfig = DEFAULT_API_CONFIG,
+) -> dict[str, Any]:
+    method = _client_method(client, api_config.account_method)
+    data = safe_api_call(api_config.account_method, method, account_hash, fields=fields or api_config.account_fields)
     return data or {}
 
 
-def get_accounts(client: Any, fields: str = "positions") -> list[dict[str, Any]]:
-    data = safe_api_call("get_accounts", client.get_accounts, fields=fields)
+def get_accounts(
+    client: Any,
+    fields: str | None = None,
+    api_config: SchwabApiConfig = DEFAULT_API_CONFIG,
+) -> list[dict[str, Any]]:
+    method = _client_method(client, api_config.accounts_method)
+    data = safe_api_call(api_config.accounts_method, method, fields=fields or api_config.account_fields)
     return data or []
 
 
@@ -190,6 +215,7 @@ def build_spread_order_json(
     *,
     quantity: int = 1,
     limit_price: float | None = None,
+    api_config: SchwabApiConfig = DEFAULT_API_CONFIG,
 ) -> dict[str, Any]:
     legs = trade.get("legs") or []
     if not legs:
@@ -216,11 +242,11 @@ def build_spread_order_json(
         logger.info("Falling back to manual staged order JSON: %s", exc)
 
     order = {
-        "session": "NORMAL",
-        "duration": "DAY",
+        "session": api_config.default_order_session,
+        "duration": api_config.default_order_duration,
         "orderType": order_type,
-        "orderStrategyType": "SINGLE",
-        "complexOrderStrategyType": trade.get("complex_order_type", "VERTICAL"),
+        "orderStrategyType": api_config.default_order_strategy_type,
+        "complexOrderStrategyType": trade.get("complex_order_type", api_config.default_complex_order_type),
         "orderLegCollection": [],
     }
     if price:
@@ -236,5 +262,11 @@ def build_spread_order_json(
     return order
 
 
-def place_order(client: Any, account_hash: str, order_json: dict[str, Any]) -> Any:
-    return safe_api_call("place_order", client.place_order, account_hash, order_json)
+def place_order(
+    client: Any,
+    account_hash: str,
+    order_json: dict[str, Any],
+    api_config: SchwabApiConfig = DEFAULT_API_CONFIG,
+) -> Any:
+    method = _client_method(client, api_config.place_order_method)
+    return safe_api_call(api_config.place_order_method, method, account_hash, order_json)

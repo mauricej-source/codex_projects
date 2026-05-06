@@ -7,6 +7,7 @@ from typing import Any
 import pandas as pd
 import streamlit as st
 
+from options_suite.api_config import api_config_from_dict, api_config_to_dict
 from options_suite.discovery import run_discovery
 from options_suite.help_docs import HELP_MARKDOWN
 from options_suite.logging_config import configure_logging
@@ -168,6 +169,11 @@ def ensure_state() -> None:
     st.session_state.setdefault("discovery_results", None)
     st.session_state.setdefault("manual_tickers", ", ".join(DEFAULT_TICKERS))
     st.session_state.setdefault("last_screener_trades", [])
+    st.session_state.setdefault("api_config", api_config_to_dict())
+
+
+def current_api_config():
+    return api_config_from_dict(st.session_state.get("api_config"))
 
 
 def client_ready() -> bool:
@@ -204,6 +210,38 @@ def page_config() -> None:
         except Exception as exc:
             st.error(f"Authentication failed: {exc}")
 
+    with st.expander("Advanced Schwab API Wrapper Settings"):
+        st.caption("These values map app features to schwab-py methods and default API parameters.")
+        cfg = api_config_to_dict(current_api_config())
+        c1, c2 = st.columns(2)
+        with c1:
+            cfg["quotes_method"] = st.text_input("Quotes Method", value=cfg["quotes_method"])
+            cfg["option_chain_method"] = st.text_input("Option Chain Method", value=cfg["option_chain_method"])
+            cfg["accounts_method"] = st.text_input("Accounts Method", value=cfg["accounts_method"])
+            cfg["account_method"] = st.text_input("Single Account Method", value=cfg["account_method"])
+            cfg["account_numbers_method"] = st.text_input("Account Numbers Method", value=cfg["account_numbers_method"])
+            cfg["place_order_method"] = st.text_input("Place Order Method", value=cfg["place_order_method"])
+        with c2:
+            cfg["account_fields"] = st.text_input("Account Fields", value=cfg["account_fields"])
+            cfg["option_chain_strategy"] = st.text_input("Option Chain Strategy", value=cfg["option_chain_strategy"])
+            cfg["include_underlying_quote"] = st.checkbox(
+                "Include Underlying Quote",
+                value=bool(cfg["include_underlying_quote"]),
+            )
+            cfg["default_order_session"] = st.text_input("Default Order Session", value=cfg["default_order_session"])
+            cfg["default_order_duration"] = st.text_input("Default Order Duration", value=cfg["default_order_duration"])
+            cfg["default_order_strategy_type"] = st.text_input(
+                "Default Order Strategy Type",
+                value=cfg["default_order_strategy_type"],
+            )
+            cfg["default_complex_order_type"] = st.text_input(
+                "Default Complex Order Type",
+                value=cfg["default_complex_order_type"],
+            )
+        if st.button("Save API Wrapper Settings"):
+            st.session_state["api_config"] = api_config_to_dict(api_config_from_dict(cfg))
+            st.success("API wrapper settings saved for this session.")
+
     with st.expander("OSI Formatter"):
         human = st.text_input("Human-readable option", value="SPY 450 Call 05/15/26")
         if st.button("Convert to OSI"):
@@ -236,6 +274,7 @@ def discovery_controls(account_segment: str) -> None:
                 strike_count=strike_count,
                 min_dte=int(min_dte),
                 max_dte=int(max_dte),
+                api_config=current_api_config(),
             )
         st.success("Discovery scan completed.")
 
@@ -262,7 +301,7 @@ def _trade_action_panel(trades: list[dict[str, Any]]) -> None:
     live_ack = st.checkbox("I understand live submission sends an order to Schwab", value=False, disabled=paper_trade)
 
     try:
-        order_json = build_spread_order_json(selected, quantity=int(quantity))
+        order_json = build_spread_order_json(selected, quantity=int(quantity), api_config=current_api_config())
         st.json(order_json, expanded=False)
     except Exception as exc:
         st.error(f"Could not build order JSON: {exc}")
@@ -281,7 +320,7 @@ def _trade_action_panel(trades: list[dict[str, Any]]) -> None:
             if not account_hash:
                 st.warning("Enter an account hash before submitting.")
             else:
-                response = place_order(st.session_state["schwab_client"], account_hash, order_json)
+                response = place_order(st.session_state["schwab_client"], account_hash, order_json, current_api_config())
                 insert_trade(selected, trade_type="Live", status="Open", order_json=order_json)
                 st.write(response or "Order request sent; no response body returned.")
 
@@ -324,7 +363,8 @@ def page_screener(account_segment: str) -> None:
                     strike_count=int(strike_count),
                     from_date=from_date,
                     to_date=to_date,
-                    strategy="SINGLE",
+                    strategy=current_api_config().option_chain_strategy,
+                    api_config=current_api_config(),
                 )
                 all_trades.extend(
                     generate_trades_from_chain(
@@ -378,7 +418,7 @@ def page_portfolio() -> None:
         st.info("Authenticate in Configuration first.")
         return
     if st.button("Refresh Portfolio", type="primary"):
-        balances, positions = fetch_portfolio(st.session_state["schwab_client"])
+        balances, positions = fetch_portfolio(st.session_state["schwab_client"], current_api_config())
         st.session_state["portfolio_balances"] = balances
         st.session_state["portfolio_positions"] = positions
     balances = st.session_state.get("portfolio_balances", pd.DataFrame())

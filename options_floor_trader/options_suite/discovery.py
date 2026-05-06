@@ -4,6 +4,7 @@ import datetime as dt
 import logging
 from typing import Any
 
+from .api_config import DEFAULT_API_CONFIG, SchwabApiConfig
 from .chains import quote_iv_context
 from .engine import iv_rank
 from .schwab_client import get_option_chain, get_quotes
@@ -26,9 +27,13 @@ def _estimated_iv_rank_from_quote(quote: dict[str, Any]) -> tuple[float, float |
     return 0.0, None
 
 
-def rank_universe_by_iv(client: Any, universe: list[str] | None = None) -> list[dict[str, Any]]:
+def rank_universe_by_iv(
+    client: Any,
+    universe: list[str] | None = None,
+    api_config: SchwabApiConfig = DEFAULT_API_CONFIG,
+) -> list[dict[str, Any]]:
     universe = universe or TOP_LIQUID_UNIVERSE
-    quotes = get_quotes(client, universe)
+    quotes = get_quotes(client, universe, api_config=api_config)
     ranked: list[dict[str, Any]] = []
     for symbol in universe:
         quote = quotes.get(symbol) or quotes.get(symbol.upper()) or {}
@@ -46,8 +51,9 @@ def run_discovery(
     strike_count: int = 10,
     min_dte: int = 7,
     max_dte: int = 60,
+    api_config: SchwabApiConfig = DEFAULT_API_CONFIG,
 ) -> dict[str, Any]:
-    ranked_symbols = rank_universe_by_iv(client, universe)
+    ranked_symbols = rank_universe_by_iv(client, universe, api_config=api_config)
     selected = ranked_symbols[:top_symbols]
     trades: list[dict[str, Any]] = []
     from_date = dt.date.today() + dt.timedelta(days=max(0, min_dte - 2))
@@ -61,7 +67,8 @@ def run_discovery(
             strike_count=strike_count,
             from_date=from_date,
             to_date=to_date,
-            strategy="SINGLE",
+            strategy=api_config.option_chain_strategy,
+            api_config=api_config,
         )
         if not chain:
             logger.info("No option chain returned for %s", ticker)

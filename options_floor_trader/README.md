@@ -29,6 +29,59 @@ The app provides six primary pages:
 
 Paper trading is supported through a checkbox in the screener. When enabled, staged trades are saved locally with `status='PAPER'` and no live order is submitted.
 
+## API Usage
+
+The screener is not fully hardcoded. The strategy rules, formulas, default ticker universe, and ranking thresholds are local application logic, but live market data is fetched from Schwab through `schwab-py`.
+
+The main Schwab API-backed functions are:
+
+- **Quotes**: Used by Discovery to rank the liquid universe by IV Rank context before fetching option chains.
+- **Option Chains**: Used by Discovery and Screener to build candidate spreads, cash-secured puts, debit spreads, and other strategy candidates.
+- **Accounts**: Used by the Portfolio page to fetch balances and open positions.
+- **Orders**: Used only when staging or submitting live orders. Paper trades are saved locally and do not call the Schwab order endpoint.
+
+Project wrappers around these API calls live in:
+
+```text
+options_suite/schwab_client.py
+options_suite/api_config.py
+```
+
+The local strategy engine lives in:
+
+```text
+options_suite/screener.py
+options_suite/engine.py
+options_suite/discovery.py
+```
+
+In short: Schwab provides the live quotes, option-chain data, accounts, and order endpoint. Options Floor Trader provides the screening, filtering, scoring, ranking, and SQLite trade logging.
+
+### Configurable API Wrapper Settings
+
+The app includes an **Advanced Schwab API Wrapper Settings** section on the Configuration page. These settings are stored in `st.session_state` and let you change the method names and default request parameters used by the app if `schwab-py` changes in the future.
+
+Configurable values include:
+
+- Quotes method name
+- Option-chain method name
+- Accounts method name
+- Single-account method name
+- Account-numbers method name
+- Place-order method name
+- Account fields, currently defaulted to `positions`
+- Option-chain strategy, currently defaulted to `SINGLE`
+- Whether to include the underlying quote with option chains
+- Default order session, duration, strategy type, and complex order type
+
+The default API wrapper profile is defined in:
+
+```text
+options_suite/api_config.py
+```
+
+These settings do not replace Schwab credentials and do not change raw Schwab endpoint URLs directly. They configure how Options Floor Trader calls the installed `schwab-py` client.
+
 ## Application Help
 
 The built-in Help/Docs page describes:
@@ -105,6 +158,7 @@ Useful references:
 Core project files:
 
 - `app.py`: Streamlit application entry point
+- `options_suite/api_config.py`: Configurable Schwab wrapper method names and default API parameters
 - `options_suite/schwab_client.py`: Schwab auth, API calls, OSI formatting, and order staging
 - `options_suite/engine.py`: POP, EV, IV Rank, Capital Efficiency, and success rating helpers
 - `options_suite/discovery.py`: Automated liquid-universe discovery scan

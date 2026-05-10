@@ -12,4 +12,4 @@ Projects as they have been Created:
 7.  Expense Dashboard
 8.  Charles Schwab - Individual Options Trading Suite
 9.  AWS Infrastructure Decision Utility
-10. AI Unit Calculator
+10. 

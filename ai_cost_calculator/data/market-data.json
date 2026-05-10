@@ -1,0 +1,337 @@
+{
+  "version": "live-2026-05-06",
+  "last_updated": "2026-05-06",
+  "tco_multiplier": 1.15,
+  "gpus": [
+    {
+      "id": "h100-80gb",
+      "model": "H100",
+      "category": "Datacenter",
+      "vram_gb": 80,
+      "hardware_cost": 25000,
+      "rent_on_demand": 6.88,
+      "rent_spot": 2.192418
+    },
+    {
+      "id": "h200-141gb",
+      "model": "H200",
+      "category": "Datacenter",
+      "vram_gb": 141,
+      "hardware_cost": 32000,
+      "rent_on_demand": 7.912,
+      "rent_spot": 2.55
+    },
+    {
+      "id": "b200-192gb",
+      "model": "B200",
+      "category": "Datacenter",
+      "vram_gb": 192,
+      "hardware_cost": 35000,
+      "rent_on_demand": 14.2416,
+      "rent_spot": 3.9
+    },
+    {
+      "id": "a100-80gb",
+      "model": "A100",
+      "category": "Datacenter",
+      "vram_gb": 80,
+      "hardware_cost": 11000,
+      "rent_on_demand": 3.430881,
+      "rent_spot": 0.746721
+    },
+    {
+      "id": "l40s-48gb",
+      "model": "L40S",
+      "category": "Inference",
+      "vram_gb": 48,
+      "hardware_cost": 8000,
+      "rent_on_demand": 1.861,
+      "rent_spot": 0.63
+    },
+    {
+      "id": "rtx-6000-ada-48gb",
+      "model": "RTX 6000 Ada",
+      "category": "Workstation",
+      "vram_gb": 48,
+      "hardware_cost": 6800,
+      "rent_on_demand": 0.9,
+      "rent_spot": 0.54
+    },
+    {
+      "id": "a10g-24gb",
+      "model": "A10G",
+      "category": "Inference",
+      "vram_gb": 24,
+      "hardware_cost": 3000,
+      "rent_on_demand": 1.006,
+      "rent_spot": 0.45
+    },
+    {
+      "id": "l4-24gb",
+      "model": "L4",
+      "category": "Inference",
+      "vram_gb": 24,
+      "hardware_cost": 2500,
+      "rent_on_demand": 0.55,
+      "rent_spot": 0.33
+    }
+  ],
+  "apis": [
+    {
+      "id": "gpt-5",
+      "provider": "OpenAI",
+      "model": "GPT-5",
+      "tier": "Frontier Reasoning",
+      "input": 1.25,
+      "output": 10
+    },
+    {
+      "id": "gpt-5-mini",
+      "provider": "OpenAI",
+      "model": "GPT-5 Mini",
+      "tier": "Performance",
+      "input": 0.25,
+      "output": 2
+    },
+    {
+      "id": "gpt-5-nano",
+      "provider": "OpenAI",
+      "model": "GPT-5 Nano",
+      "tier": "Value",
+      "input": 0.05,
+      "output": 0.4
+    },
+    {
+      "id": "gpt-4.1",
+      "provider": "OpenAI",
+      "model": "GPT-4.1",
+      "tier": "Frontier",
+      "input": 2,
+      "output": 8
+    },
+    {
+      "id": "gpt-4.1-mini",
+      "provider": "OpenAI",
+      "model": "GPT-4.1 Mini",
+      "tier": "Performance",
+      "input": 0.4,
+      "output": 1.6
+    },
+    {
+      "id": "gpt-4.1-nano",
+      "provider": "OpenAI",
+      "model": "GPT-4.1 Nano",
+      "tier": "Value",
+      "input": 0.1,
+      "output": 0.4
+    },
+    {
+      "id": "o3",
+      "provider": "OpenAI",
+      "model": "o3",
+      "tier": "Frontier Reasoning",
+      "input": 2,
+      "output": 8
+    },
+    {
+      "id": "o4-mini",
+      "provider": "OpenAI",
+      "model": "o4-mini",
+      "tier": "Performance Reasoning",
+      "input": 1.1,
+      "output": 4.4
+    },
+    {
+      "id": "claude-4-opus",
+      "provider": "Anthropic",
+      "model": "Claude 4 Opus",
+      "tier": "Frontier Reasoning",
+      "input": 15,
+      "output": 75
+    },
+    {
+      "id": "claude-4-sonnet",
+      "provider": "Anthropic",
+      "model": "Claude 4 Sonnet",
+      "tier": "Frontier",
+      "input": 3,
+      "output": 15
+    },
+    {
+      "id": "claude-3.7-sonnet",
+      "provider": "Anthropic",
+      "model": "Claude 3.7 Sonnet",
+      "tier": "Performance Reasoning",
+      "input": 3,
+      "output": 15
+    },
+    {
+      "id": "claude-3.5-haiku",
+      "provider": "Anthropic",
+      "model": "Claude 3.5 Haiku",
+      "tier": "Value",
+      "input": 0.8,
+      "output": 4
+    },
+    {
+      "id": "gemini-2.5-pro",
+      "provider": "Google",
+      "model": "Gemini 2.5 Pro",
+      "tier": "Frontier Reasoning",
+      "input": 1.25,
+      "output": 10
+    },
+    {
+      "id": "gemini-2.5-flash",
+      "provider": "Google",
+      "model": "Gemini 2.5 Flash",
+      "tier": "Performance",
+      "input": 0.3,
+      "output": 2.5
+    },
+    {
+      "id": "gemini-2.0-flash",
+      "provider": "Google",
+      "model": "Gemini 2.0 Flash",
+      "tier": "Value",
+      "input": 0.1,
+      "output": 0.4
+    },
+    {
+      "id": "deepseek-v3",
+      "provider": "DeepSeek",
+      "model": "DeepSeek V3",
+      "tier": "Value",
+      "input": 0.28,
+      "output": 0.42
+    },
+    {
+      "id": "deepseek-r1",
+      "provider": "DeepSeek",
+      "model": "DeepSeek R1",
+      "tier": "Performance Reasoning",
+      "input": 0.28,
+      "output": 0.42
+    },
+    {
+      "id": "llama-4-maverick",
+      "provider": "Meta Cloud",
+      "model": "Llama 4 Maverick",
+      "tier": "Performance",
+      "input": 0.6,
+      "output": 0.9
+    },
+    {
+      "id": "llama-4-scout",
+      "provider": "Meta Cloud",
+      "model": "Llama 4 Scout",
+      "tier": "Value",
+      "input": 0.25,
+      "output": 0.45
+    },
+    {
+      "id": "llama-3.3-70b",
+      "provider": "Meta Cloud",
+      "model": "Llama 3.3 70B",
+      "tier": "Value",
+      "input": 0.59,
+      "output": 0.79
+    },
+    {
+      "id": "mistral-large-2",
+      "provider": "Mistral",
+      "model": "Mistral Large 2",
+      "tier": "Performance",
+      "input": 0.5,
+      "output": 1.5
+    },
+    {
+      "id": "mistral-small-3",
+      "provider": "Mistral",
+      "model": "Mistral Small 3",
+      "tier": "Value",
+      "input": 0.06,
+      "output": 0.18
+    },
+    {
+      "id": "codestral",
+      "provider": "Mistral",
+      "model": "Codestral",
+      "tier": "Performance",
+      "input": 1,
+      "output": 3
+    },
+    {
+      "id": "grok-3",
+      "provider": "xAI",
+      "model": "Grok 3",
+      "tier": "Frontier",
+      "input": 3,
+      "output": 15
+    },
+    {
+      "id": "grok-3-mini",
+      "provider": "xAI",
+      "model": "Grok 3 Mini",
+      "tier": "Performance Reasoning",
+      "input": 0.3,
+      "output": 0.5
+    },
+    {
+      "id": "command-a",
+      "provider": "Cohere",
+      "model": "Command A",
+      "tier": "Performance",
+      "input": 2.5,
+      "output": 10
+    },
+    {
+      "id": "command-r-plus",
+      "provider": "Cohere",
+      "model": "Command R+",
+      "tier": "Performance",
+      "input": 2.5,
+      "output": 10
+    },
+    {
+      "id": "command-r",
+      "provider": "Cohere",
+      "model": "Command R",
+      "tier": "Value",
+      "input": 0.15,
+      "output": 0.6
+    },
+    {
+      "id": "jamba-1.5-large",
+      "provider": "AI21",
+      "model": "Jamba 1.5 Large",
+      "tier": "Performance",
+      "input": 2,
+      "output": 8
+    },
+    {
+      "id": "jamba-1.5-mini",
+      "provider": "AI21",
+      "model": "Jamba 1.5 Mini",
+      "tier": "Value",
+      "input": 0.2,
+      "output": 0.4
+    },
+    {
+      "id": "qwen3-235b",
+      "provider": "Alibaba Cloud",
+      "model": "Qwen3 235B",
+      "tier": "Performance Reasoning",
+      "input": 0.7,
+      "output": 2.8
+    },
+    {
+      "id": "qwen3-32b",
+      "provider": "Alibaba Cloud",
+      "model": "Qwen3 32B",
+      "tier": "Value",
+      "input": 0.2,
+      "output": 0.8
+    }
+  ]
+}

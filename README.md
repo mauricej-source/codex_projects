@@ -7,9 +7,9 @@ Projects as they have been Created:
 2.  Financial News Screener
 3.  Employment Screener
 4.  Florida Energy Consumption
-5.  Job Description - Technical Assessment Generator
+5.  Job Description Technical Assessment Generator
 6.  Lottery Gap Strategy Dashboard
 7.  Expense Dashboard
-8.  AWS Infrastructure Decision Utility
-9.  Individual Options Trading Suite - Charles Schwab
-10. 
+8.  Charles Schwab - Individual Options Trading Suite
+9.  AWS Infrastructure Decision Utility
+10. AI Unit Calculator
